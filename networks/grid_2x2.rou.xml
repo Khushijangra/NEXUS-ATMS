@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Routes for 2x2 grid network -->
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+
+    <vType id="car" accel="2.6" decel="4.5" sigma="0.5" length="5.0" maxSpeed="13.89" color="1,1,0"/>
+
+    <!-- North-South through traffic -->
+    <flow id="top_A_to_bot_C" type="car" begin="0" end="3600" probability="0.10"
+          from="top_to_A" to="C_to_bot" via="A_to_C" departLane="best" departSpeed="max"/>
+    <flow id="top_B_to_bot_D" type="car" begin="0" end="3600" probability="0.10"
+          from="top_to_B" to="D_to_bot" via="B_to_D" departLane="best" departSpeed="max"/>
+    <flow id="bot_C_to_top_A" type="car" begin="0" end="3600" probability="0.10"
+          from="bot_to_C" to="A_to_top" via="C_to_A" departLane="best" departSpeed="max"/>
+    <flow id="bot_D_to_top_B" type="car" begin="0" end="3600" probability="0.10"
+          from="bot_to_D" to="B_to_top" via="D_to_B" departLane="best" departSpeed="max"/>
+
+    <!-- East-West through traffic -->
+    <flow id="left_A_to_right_B" type="car" begin="0" end="3600" probability="0.08"
+          from="left_to_A" to="B_to_right" via="A_to_B" departLane="best" departSpeed="max"/>
+    <flow id="right_B_to_left_A" type="car" begin="0" end="3600" probability="0.08"
+          from="right_to_B" to="A_to_left" via="B_to_A" departLane="best" departSpeed="max"/>
+    <flow id="left_C_to_right_D" type="car" begin="0" end="3600" probability="0.08"
+          from="left_to_C" to="D_to_right" via="C_to_D" departLane="best" departSpeed="max"/>
+    <flow id="right_D_to_left_C" type="car" begin="0" end="3600" probability="0.08"
+          from="right_to_D" to="C_to_left" via="D_to_C" departLane="best" departSpeed="max"/>
+
+    <!-- Cross traffic (diagonal paths through grid) -->
+    <flow id="top_A_to_right_D" type="car" begin="0" end="3600" probability="0.04"
+          from="top_to_A" to="D_to_right" departLane="best" departSpeed="max"/>
+    <flow id="left_A_to_bot_D" type="car" begin="0" end="3600" probability="0.04"
+          from="left_to_A" to="D_to_bot" departLane="best" departSpeed="max"/>
+    <flow id="right_B_to_bot_C" type="car" begin="0" end="3600" probability="0.04"
+          from="right_to_B" to="C_to_bot" departLane="best" departSpeed="max"/>
+    <flow id="bot_C_to_right_B" type="car" begin="0" end="3600" probability="0.04"
+          from="bot_to_C" to="B_to_right" departLane="best" departSpeed="max"/>
+
+</routes>

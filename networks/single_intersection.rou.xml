@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Route file for single intersection - moderate traffic -->
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+
+    <!-- Vehicle types -->
+    <vType id="car" accel="2.6" decel="4.5" sigma="0.5" length="5.0"
+           maxSpeed="13.89" minGap="2.5" color="1,1,0"/>
+    <vType id="bus" accel="1.2" decel="4.0" sigma="0.5" length="12.0"
+           maxSpeed="11.11" minGap="3.0" color="0,0,1"/>
+
+    <!-- Traffic flows: North-South corridor (heavier) -->
+    <flow id="north_south" type="car" begin="0" end="3600" probability="0.15"
+          from="north_in" to="south_out" departLane="best" departSpeed="max"/>
+    <flow id="south_north" type="car" begin="0" end="3600" probability="0.15"
+          from="south_in" to="north_out" departLane="best" departSpeed="max"/>
+
+    <!-- Traffic flows: East-West corridor -->
+    <flow id="east_west" type="car" begin="0" end="3600" probability="0.10"
+          from="east_in" to="west_out" departLane="best" departSpeed="max"/>
+    <flow id="west_east" type="car" begin="0" end="3600" probability="0.10"
+          from="west_in" to="east_out" departLane="best" departSpeed="max"/>
+
+    <!-- Turning traffic -->
+    <flow id="north_east" type="car" begin="0" end="3600" probability="0.03"
+          from="north_in" to="east_out" departLane="best" departSpeed="max"/>
+    <flow id="north_west" type="car" begin="0" end="3600" probability="0.03"
+          from="north_in" to="west_out" departLane="best" departSpeed="max"/>
+    <flow id="south_east" type="car" begin="0" end="3600" probability="0.03"
+          from="south_in" to="east_out" departLane="best" departSpeed="max"/>
+    <flow id="south_west" type="car" begin="0" end="3600" probability="0.03"
+          from="south_in" to="west_out" departLane="best" departSpeed="max"/>
+    <flow id="east_north" type="car" begin="0" end="3600" probability="0.02"
+          from="east_in" to="north_out" departLane="best" departSpeed="max"/>
+    <flow id="east_south" type="car" begin="0" end="3600" probability="0.02"
+          from="east_in" to="south_out" departLane="best" departSpeed="max"/>
+    <flow id="west_north" type="car" begin="0" end="3600" probability="0.02"
+          from="west_in" to="north_out" departLane="best" departSpeed="max"/>
+    <flow id="west_south" type="car" begin="0" end="3600" probability="0.02"
+          from="west_in" to="south_out" departLane="best" departSpeed="max"/>
+
+    <!-- Bus routes (periodic) -->
+    <flow id="bus_ns" type="bus" begin="0" end="3600" period="300"
+          from="north_in" to="south_out" departLane="0" departSpeed="max"/>
+    <flow id="bus_ew" type="bus" begin="60" end="3600" period="360"
+          from="east_in" to="west_out" departLane="0" departSpeed="max"/>
+
+</routes>

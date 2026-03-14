@@ -1,0 +1,63 @@
+# Python caches and artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Build/distribution
+build/
+dist/
+*.egg-info/
+
+# Runtime logs and generated outputs
+logs/
+models/
+results/
+reports/
+audio_cache/
+
+# Large model/data artifacts
+yolov8n.pt
+*.pt
+*.pth
+*.pkl
+*.npz
+*.onnx
+*.tflite
+
+# Frontend/node (if React/Vite dashboard is used)
+node_modules/
+.npm/
+coverage/
+*.tsbuildinfo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Misc
+*.log
+*.tmp
+*.bak

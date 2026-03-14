@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Node definitions for single intersection network -->
+<nodes>
+    <!-- Central intersection -->
+    <node id="center" x="500.0" y="500.0" type="traffic_light"/>
+
+    <!-- Boundary nodes (entry/exit points) -->
+    <node id="north" x="500.0" y="1000.0" type="dead_end"/>
+    <node id="south" x="500.0" y="0.0"    type="dead_end"/>
+    <node id="east"  x="1000.0" y="500.0"  type="dead_end"/>
+    <node id="west"  x="0.0"   y="500.0"  type="dead_end"/>
+</nodes>

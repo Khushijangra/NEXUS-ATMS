@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS-ATMS — Intelligent Traffic Management</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0e1a;
+    color: #e0e6f0;
+    font-family: 'Segoe UI', sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* ── TOP NAV ── */
+  .topnav {
+    background: #0d1220;
+    border-bottom: 1px solid #1e3a5f;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topnav .logo {
+    font-size: 20px;
+    font-weight: 700;
+    color: #00d4ff;
+    letter-spacing: 2px;
+  }
+  .topnav .logo span { color: #ff6b35; }
+  .live-badge {
+    background: #ff2244;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .nav-time { color: #7a9abf; font-size: 13px; }
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab {
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    color: #7a9abf;
+    background: transparent;
+  }
+  .nav-tab:hover { background: #1a2840; color: #00d4ff; }
+  .nav-tab.active { background: #0f3460; color: #00d4ff; border-color: #00d4ff44; }
+
+  /* ── LAYOUT ── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    grid-template-rows: auto auto;
+    gap: 12px;
+    padding: 12px;
+    min-height: calc(100vh - 54px);
+  }
+
+  /* ── PANELS ── */
+  .panel {
+    background: #0d1528;
+    border: 1px solid #1e3a5f;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .panel-header {
+    background: #0f1e38;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #1e3a5f;
+  }
+  .panel-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #00d4ff;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .panel-body { padding: 14px; }
+
+  /* ── STAT CARDS ── */
+  .stat-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .stat-card {
+    background: #0f1e38;
+    border: 1px solid #1e3a5f;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-card .val {
+    font-size: 22px;
+    font-weight: 700;
+    color: #00d4ff;
+  }
+  .stat-card .val.green { color: #00e676; }
+  .stat-card .val.orange { color: #ff9800; }
+  .stat-card .val.red { color: #ff4444; }
+  .stat-card .lbl { font-size: 10px; color: #5a7a9f; margin-top: 2px; }
+  .stat-card .delta { font-size: 11px; color: #00e676; }
+
+  /* ── DIGITAL TWIN CANVAS ── */
+  .twin-panel { grid-row: span 2; position: relative; }
+  #cityCanvas {
+    width: 100%; height: 520px; display: block;
+    background: #07101f; border-radius: 0 0 10px 10px;
+  }
+
+  /* ── ALERTS ── */
+  .alert-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 10px; border-radius: 6px; margin-bottom: 6px;
+    font-size: 12px; border-left: 3px solid;
+  }
+  .alert-warn { background: #1a1500; border-color: #ff9800; }
+  .alert-danger { background: #1a0010; border-color: #ff2244; }
+  .alert-info { background: #001a2a; border-color: #00d4ff; }
+  .alert-ok { background: #001a08; border-color: #00e676; }
+  .alert-icon { font-size: 16px; }
+  .alert-text .t { font-weight: 600; color: #e0e6f0; }
+  .alert-text .s { color: #7a9abf; font-size: 11px; }
+  .alert-actions { margin-top: 4px; display: flex; gap: 6px; }
+  .btn-xs {
+    padding: 2px 8px; border-radius: 4px; font-size: 10px;
+    cursor: pointer; border: 1px solid; font-weight: 600; transition: all 0.15s;
+    background: transparent;
+  }
+  .btn-blue { border-color: #00d4ff; color: #00d4ff; }
+  .btn-blue:hover { background: #00d4ff22; }
+  .btn-red { border-color: #ff4444; color: #ff4444; }
+  .btn-red:hover { background: #ff444422; }
+  .btn-green { border-color: #00e676; color: #00e676; }
+  .btn-green:hover { background: #00e67622; }
+
+  /* ── SIGNAL GRID ── */
+  .signal-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .signal-cell {
+    background: #0a1525; border: 1px solid #1e3a5f; border-radius: 6px;
+    padding: 8px; text-align: center; cursor: pointer; transition: all 0.2s; position: relative;
+  }
+  .signal-cell:hover { border-color: #00d4ff55; background: #0f1e38; }
+  .signal-cell.emergency { border-color: #0088ff; animation: emergencyGlow 1s infinite alternate; }
+  @keyframes emergencyGlow { from{box-shadow:0 0 4px #0088ff44} to{box-shadow:0 0 12px #0088ff99} }
+  .signal-dot {
+    width: 18px; height: 18px; border-radius: 50%; margin: 0 auto 4px; box-shadow: 0 0 6px;
+  }
+  .sig-green { background: #00e676; box-shadow: 0 0 8px #00e676; }
+  .sig-red { background: #ff2244; box-shadow: 0 0 8px #ff2244; }
+  .sig-amber { background: #ff9800; box-shadow: 0 0 8px #ff9800; animation: amberpulse 0.8s infinite alternate; }
+  .sig-blue { background: #00aaff; box-shadow: 0 0 10px #00aaff; animation: bluepulse 0.5s infinite alternate; }
+  @keyframes amberpulse { from{opacity:0.6} to{opacity:1} }
+  @keyframes bluepulse { from{opacity:0.7} to{opacity:1} }
+  .signal-cell .jname { font-size: 10px; font-weight: 700; color: #7a9abf; }
+  .signal-cell .jqueue { font-size: 11px; color: #e0e6f0; }
+  .signal-cell .jwait { font-size: 10px; color: #5a7a9f; }
+  .signal-cell .jai { font-size: 9px; color: #00e676; margin-top: 2px; }
+
+  /* ── PROGRESS BAR ── */
+  .progress-row { margin-bottom: 8px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: #7a9abf; margin-bottom: 3px; }
+  .progress-bar { height: 6px; border-radius: 3px; background: #1e3a5f; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width 1s; }
+  .fill-green { background: linear-gradient(90deg, #00e676, #00b04f); }
+  .fill-amber { background: linear-gradient(90deg, #ff9800, #ff6600); }
+  .fill-red { background: linear-gradient(90deg, #ff2244, #cc0022); }
+  .fill-blue { background: linear-gradient(90deg, #00d4ff, #0088cc); }
+
+  /* ── COMPARISON CHART ── */
+  .comparison-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 12px; }
+  .comparison-label { width: 90px; color: #7a9abf; font-size: 11px; }
+  .bar-wrap { flex: 1; background: #0a1525; border-radius: 4px; height: 18px; overflow: hidden; }
+  .bar-val { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 6px; font-size: 10px; font-weight: 700; }
+  .bar-ai { background: linear-gradient(90deg, #00d4ff, #0077cc); color: white; }
+  .bar-baseline { background: linear-gradient(90deg, #ff4444, #cc0022); color: white; }
+
+  /* ── EMERGENCY CORRIDOR ── */
+  .corridor-path { display: flex; align-items: center; gap: 6px; margin: 10px 0; flex-wrap: wrap; }
+  .corridor-node { padding: 5px 10px; border-radius: 5px; font-size: 11px; font-weight: 700; border: 1px solid; }
+  .cnode-passed { background: #001a08; border-color: #00e676; color: #00e676; }
+  .cnode-active { background: #001530; border-color: #00aaff; color: #00aaff; animation: bluepulse 0.5s infinite alternate; }
+  .cnode-queued { background: #0a0e1a; border-color: #1e3a5f; color: #5a7a9f; }
+  .corridor-arrow { color: #1e3a5f; font-size: 16px; }
+
+  /* ── NL COMMAND BOX ── */
+  .nl-box {
+    background: #07101f; border: 1px solid #1e3a5f;
+    border-radius: 8px; padding: 10px 12px; margin-bottom: 10px;
+  }
+  .nl-input {
+    width: 100%; background: transparent; border: none;
+    color: #00d4ff; font-size: 13px; outline: none; font-family: 'Segoe UI', sans-serif;
+  }
+  .nl-understood {
+    margin-top: 8px; padding: 8px; background: #001a08; border-radius: 6px;
+    border-left: 3px solid #00e676; font-size: 11px; color: #7a9abf;
+  }
+  .nl-understood .u-row { display: flex; gap: 6px; margin-bottom: 3px; }
+  .nl-understood .u-key { color: #00e676; font-weight: 600; width: 70px; }
+  .nl-understood .u-val { color: #e0e6f0; }
+
+  /* ── INCIDENT TABLE ── */
+  .incident-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px; border-radius: 6px; margin-bottom: 4px;
+    font-size: 11px; border: 1px solid #1e3a5f; background: #0a1525;
+  }
+  .inc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .inc-type { font-weight: 700; width: 100px; color: #e0e6f0; }
+  .inc-loc { flex: 1; color: #7a9abf; }
+  .inc-time { color: #5a7a9f; width: 50px; text-align: right; }
+  .inc-badge { padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .badge-active { background: #ff224433; color: #ff4444; border: 1px solid #ff224455; }
+  .badge-resolved { background: #00e67622; color: #00e676; border: 1px solid #00e67644; }
+  .badge-monitor { background: #ff980022; color: #ff9800; border: 1px solid #ff980044; }
+
+  /* ── CARBON ── */
+  .carbon-big { text-align: center; padding: 10px 0; }
+  .carbon-big .co2-val { font-size: 38px; font-weight: 700; color: #00e676; }
+  .carbon-big .co2-lbl { font-size: 12px; color: #5a7a9f; }
+  .carbon-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+  .cbadge { font-size: 10px; padding: 3px 8px; border-radius: 4px; background: #00e67611; border: 1px solid #00e67633; color: #00e676; }
+
+  /* ── CITIZEN PORTAL ── */
+  .citizen-card { background: #07101f; border: 1px solid #00d4ff33; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+  .citizen-route { display: flex; gap: 8px; align-items: center; font-size: 12px; margin-bottom: 8px; }
+  .route-box { flex: 1; background: #0d1528; border: 1px solid #1e3a5f; border-radius: 5px; padding: 5px 8px; font-size: 11px; color: #00d4ff; }
+  .route-result { padding: 8px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+  .result-good { background: #001a0833; border: 1px solid #00e67644; color: #00e676; }
+
+  /* ── ZONE FORECAST ── */
+  .zone-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 11px; }
+  .zone-name { width: 55px; color: #7a9abf; }
+
+  /* ── BOTTOM ROW ── */
+  .bottom-row { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  /* ── MAINTENANCE ── */
+  .maintenance-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px; border-radius: 6px; margin-bottom: 4px;
+    font-size: 11px; background: #0a1525; border: 1px solid #1e3a5f;
+  }
+  .conf-bar { height: 5px; border-radius: 2px; }
+
+  /* ── ARCHITECTURE ── */
+  .arch-title { text-align: center; font-size: 16px; font-weight: 700; color: #00d4ff; margin-bottom: 16px; letter-spacing: 2px; }
+  .arch-grid { display: grid; gap: 8px; margin-bottom: 4px; }
+  .arch-layer { background: #0d1528; border: 1px solid #1e3a5f; border-radius: 8px; padding: 12px 8px; text-align: center; }
+  .arch-layer .icon { font-size: 24px; margin-bottom: 6px; }
+  .arch-layer .name { font-size: 11px; font-weight: 700; color: #00d4ff; }
+  .arch-layer .desc { font-size: 10px; color: #5a7a9f; margin-top: 3px; }
+  .arch-arrow { text-align: center; color: #00d4ff44; font-size: 28px; margin: 4px 0; }
+
+  /* ── AI ANALYTICS ── */
+  .ai-metric-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin: 10px 0; }
+  .ai-metric { background: #0a1525; border: 1px solid #1e3a5f; border-radius: 8px; padding: 10px; text-align: center; }
+  .ai-metric .ai-val { font-size: 20px; font-weight: 700; }
+  .ai-metric .ai-lbl { font-size: 10px; color: #5a7a9f; margin-top: 2px; }
+
+  /* ── SECTION HEADING ── */
+  .section-heading {
+    grid-column: 1 / -1; font-size: 11px; font-weight: 700;
+    color: #ff6b35; letter-spacing: 3px; text-transform: uppercase;
+    padding: 6px 4px; border-left: 3px solid #ff6b35; padding-left: 10px;
+  }
+
+  .tooltip-hint { font-size: 10px; color: #3a5a7f; text-align: center; padding: 6px; font-style: italic; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0a0e1a; }
+  ::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 3px; }
+
+  @media (max-width: 900px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .stat-cards { grid-template-columns: repeat(2, 1fr); }
+    .bottom-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ TOP NAV ═══════════════════ -->
+<div class="topnav">
+  <div class="logo">NEXUS<span>-</span>ATMS</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showTab('authority')">Authority Dashboard</button>
+    <button class="nav-tab" onclick="showTab('citizen')">Citizen Portal</button>
+    <button class="nav-tab" onclick="showTab('ai')">AI Analytics</button>
+    <button class="nav-tab" onclick="showTab('arch')">System Architecture</button>
+  </div>
+  <div style="display:flex;gap:12px;align-items:center">
+    <span class="live-badge" id="connBadge">● LIVE</span>
+    <span class="nav-time" id="clock">--</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- TAB 1: AUTHORITY DASHBOARD                                        -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div id="tab-authority">
+
+<!-- STAT CARDS -->
+<div style="padding:12px 12px 0">
+  <div class="stat-cards">
+    <div class="stat-card">
+      <div class="val green" id="avgwait">--</div>
+      <div class="lbl">Avg Wait Time</div>
+      <div class="delta" id="wait-delta">&darr; --% vs fixed timing</div>
+    </div>
+    <div class="stat-card">
+      <div class="val" id="vcount">--</div>
+      <div class="lbl">Total Queue</div>
+      <div class="delta" style="color:#7a9abf">on 16 junctions</div>
+    </div>
+    <div class="stat-card">
+      <div class="val green" id="co2-saved">--</div>
+      <div class="lbl">CO&#8322; Saved Today</div>
+      <div class="delta" id="co2-delta">--</div>
+    </div>
+    <div class="stat-card">
+      <div class="val orange" id="throughput">--</div>
+      <div class="lbl">Throughput</div>
+      <div class="delta" style="color:#00d4ff" id="phase-display">--</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN GRID -->
+<div class="main-grid">
+
+  <!-- LEFT: DIGITAL TWIN -->
+  <div class="panel twin-panel">
+    <div class="panel-header">
+      <span class="panel-title">&#x1F5FA; Digital Twin &mdash; Live City View</span>
+      <span style="font-size:11px;color:#5a7a9f">4&times;4 Grid &middot; 16 Junctions</span>
+    </div>
+    <canvas id="cityCanvas"></canvas>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div>
+    <!-- SIGNAL GRID -->
+    <div class="panel" style="margin-bottom:10px">
+      <div class="panel-header">
+        <span class="panel-title">Signal Control Grid</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn-xs btn-red" onclick="allRed()">All Red</button>
+          <button class="btn-xs btn-green" onclick="aiResume()">AI Resume</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="signal-grid" id="signalGrid"></div>
+      </div>
+    </div>
+
+    <!-- PREDICTIVE ALERTS -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">&#x1F52E; Predictive Alerts</span>
+      </div>
+      <div class="panel-body" id="alertsPanel">
+        <div class="alert-item alert-warn">
+          <div class="alert-icon">&#x26A0;&#xFE0F;</div>
+          <div class="alert-text">
+            <div class="t">Junction 7 &mdash; JAM in 18 min (87% conf.)</div>
+            <div class="s">LSTM predicts congestion &middot; Extend N&rarr;S phase +8s</div>
+            <div class="alert-actions">
+              <button class="btn-xs btn-green">Apply Fix</button>
+              <button class="btn-xs btn-blue">Dismiss</button>
+            </div>
+          </div>
+        </div>
+        <div class="alert-item alert-danger">
+          <div class="alert-icon">&#x1F691;</div>
+          <div class="alert-text">
+            <div class="t">EMERGENCY CORRIDOR ACTIVE &mdash; AMB-47</div>
+            <div class="s">J3 &rarr; J7 &rarr; J11 &rarr; J15 &middot; ETA 3 min 20s</div>
+          </div>
+        </div>
+        <div class="alert-item alert-info">
+          <div class="alert-icon">&#x1F916;</div>
+          <div class="alert-text">
+            <div class="t">DQN Agent: SWITCH at J9 (conf: 94%)</div>
+            <div class="s">Queue E=12, Wait E=47s &middot; XAI: queue_east dominant</div>
+          </div>
+        </div>
+        <div class="alert-item alert-ok">
+          <div class="alert-icon">&#x2705;</div>
+          <div class="alert-text">
+            <div class="t">Anomaly at J3 &mdash; Resolved by ML ensemble</div>
+            <div class="s">IsolationForest + Autoencoder consensus &middot; Normal flow restored</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM ROW 1 -->
+  <div class="bottom-row">
+
+    <!-- AI vs BASELINE -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">&#x1F4CA; AI vs Baseline Performance</span>
+      </div>
+      <div class="panel-body">
+        <div class="comparison-row">
+          <span class="comparison-label">Avg Wait</span>
+          <div class="bar-wrap">
+            <div class="bar-val bar-baseline" style="width:100%" id="bar-fixed-wait">Fixed 62s</div>
+          </div>
+        </div>
+        <div class="comparison-row">
+          <span class="comparison-label"></span>
+          <div class="bar-wrap">
+            <div class="bar-val bar-ai" style="width:61%" id="bar-ai-wait">AI 38s &darr;39%</div>
+          </div>
+        </div>
+        <div style="height:8px"></div>
+        <div class="comparison-row">
+          <span class="comparison-label">Idle Time</span>
+          <div class="bar-wrap">
+            <div class="bar-val bar-baseline" style="width:100%">2,847 min</div>
+          </div>
+        </div>
+        <div class="comparison-row">
+          <span class="comparison-label"></span>
+          <div class="bar-wrap">
+            <div class="bar-val bar-ai" style="width:50%">1,421 min &darr;50%</div>
+          </div>
+        </div>
+        <div style="height:8px"></div>
+        <div class="comparison-row">
+          <span class="comparison-label">Queue Length</span>
+          <div class="bar-wrap">
+            <div class="bar-val bar-baseline" style="width:100%" id="bar-fixed-queue">Fixed 24.5</div>
+          </div>
+        </div>
+        <div class="comparison-row">
+          <span class="comparison-label"></span>
+          <div class="bar-wrap">
+            <div class="bar-val bar-ai" style="width:9%" id="bar-ai-queue">AI 2.3 &darr;91%</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;padding:8px;background:#001a08;border-radius:6px;font-size:11px;color:#00e676;border-left:3px solid #00e676">
+          Today: Saved <strong>1,426 vehicle-minutes</strong> of idle time
+        </div>
+        <div style="margin-top:6px;text-align:center">
+          <button class="btn-xs btn-green" style="padding:5px 16px" onclick="downloadCert()">&#x1F4C4; Download Carbon Certificate</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EMERGENCY CORRIDOR -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">&#x1F691; Emergency Corridor</span>
+        <span style="font-size:10px;background:#0088ff22;color:#00aaff;padding:2px 8px;border-radius:10px;border:1px solid #0088ff55" id="ec-status">ACTIVE</span>
+      </div>
+      <div class="panel-body">
+        <div style="font-size:11px;color:#7a9abf;margin-bottom:6px">Corridor #EC-2026-0312-001 &middot; AMB-47</div>
+        <div style="font-size:12px;color:#e0e6f0;margin-bottom:4px">Civil Hospital &rarr; Metro Hospital ICU</div>
+        <div style="font-size:11px;color:#00aaff;margin-bottom:10px">ETA: <strong>3 min 20 sec</strong></div>
+        <div class="corridor-path">
+          <div class="corridor-node cnode-passed">J3 &#10003;</div>
+          <div class="corridor-arrow">&rarr;</div>
+          <div class="corridor-node cnode-active">J7 &#x1F535;</div>
+          <div class="corridor-arrow">&rarr;</div>
+          <div class="corridor-node cnode-queued">J11 &#x23F3;</div>
+          <div class="corridor-arrow">&rarr;</div>
+          <div class="corridor-node cnode-queued">J15 &#x23F3;</div>
+        </div>
+        <div style="margin-top:8px">
+          <div class="progress-row">
+            <div class="progress-label"><span>Corridor Progress</span><span>J7 of 4</span></div>
+            <div class="progress-bar"><div class="progress-fill fill-blue" style="width:50%"></div></div>
+          </div>
+        </div>
+        <div style="padding:8px;background:#001530;border-radius:6px;font-size:11px;border-left:3px solid #00aaff;margin-top:8px">
+          Response time: <span style="color:#ff4444">8.2 min</span> &rarr; <span style="color:#00e676">5.1 min</span> &darr; 38% faster
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:#5a7a9f;font-weight:700">COMPLETED TODAY</div>
+        <div style="font-size:11px;color:#7a9abf;margin-top:4px">13:15 &middot; &#x1F692; Fire Truck &middot; saved 3.1 min</div>
+        <div style="font-size:11px;color:#7a9abf">11:44 &middot; &#x1F691; Ambulance &middot; saved 4.8 min</div>
+      </div>
+    </div>
+
+    <!-- NL COMMAND + INCIDENTS -->
+    <div>
+      <div class="panel" style="margin-bottom:10px">
+        <div class="panel-header">
+          <span class="panel-title">&#x1F4AC; Natural Language Control</span>
+        </div>
+        <div class="panel-body">
+          <div class="nl-box">
+            <div style="font-size:10px;color:#3a5a7f;margin-bottom:4px">Type a command:</div>
+            <input class="nl-input" id="nlInput" placeholder="e.g. Clear Ring Road signals for ambulance" onkeydown="if(event.key==='Enter')sendNL()">
+          </div>
+          <div class="nl-understood" id="nlResult" style="display:none">
+            <div class="u-row"><span class="u-key">&#x2705; Intent:</span><span class="u-val" id="nl-intent">--</span></div>
+            <div class="u-row"><span class="u-key">&#x2705; Target:</span><span class="u-val" id="nl-target">--</span></div>
+            <div class="u-row"><span class="u-key">&#x2705; Conf:</span><span class="u-val" id="nl-conf">--</span></div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <button class="btn-xs btn-green" style="padding:4px 14px" onclick="sendNL()">SEND</button>
+            <button class="btn-xs btn-blue" onclick="document.getElementById('nlInput').value=''">CLEAR</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">&#x1F534; Live Incidents</span>
+        </div>
+        <div class="panel-body" id="incidentsPanel">
+          <div class="incident-row">
+            <div class="inc-dot" style="background:#ff2244"></div>
+            <div class="inc-type">BREAKDOWN</div>
+            <div class="inc-loc">Lane 4A &middot; J9</div>
+            <div class="inc-time">14:28</div>
+            <span class="inc-badge badge-active">ACTIVE</span>
+          </div>
+          <div class="incident-row">
+            <div class="inc-dot" style="background:#ff9800"></div>
+            <div class="inc-type">CROWD SURGE</div>
+            <div class="inc-loc">J14 crossing</div>
+            <div class="inc-time">14:15</div>
+            <span class="inc-badge badge-monitor">MONITOR</span>
+          </div>
+          <div class="incident-row">
+            <div class="inc-dot" style="background:#00e676"></div>
+            <div class="inc-type">WRONG-WAY</div>
+            <div class="inc-loc">Junction 3</div>
+            <div class="inc-time">13:52</div>
+            <span class="inc-badge badge-resolved">RESOLVED</span>
+          </div>
+          <div class="incident-row">
+            <div class="inc-dot" style="background:#ff9800"></div>
+            <div class="inc-type">POTHOLE FLAG</div>
+            <div class="inc-loc">J9 Lane 2</div>
+            <div class="inc-time">09:14</div>
+            <span class="inc-badge badge-monitor">PWD NOTIFIED</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- end bottom-row -->
+
+  <!-- BOTTOM ROW 2: CARBON + MAINTENANCE + SECURITY -->
+  <div class="bottom-row" style="margin-top:0">
+
+    <!-- CARBON -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">&#x1F331; Carbon &amp; ESG Dashboard</span>
+      </div>
+      <div class="panel-body">
+        <div class="carbon-big">
+          <div class="co2-val" id="co2-big">14.2 kg</div>
+          <div class="co2-lbl">CO&#8322; Avoided Today</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0">
+          <div style="background:#0a1525;border-radius:6px;padding:8px;text-align:center;border:1px solid #1e3a5f">
+            <div style="font-size:16px;font-weight:700;color:#00d4ff" id="co2-month">218.4 kg</div>
+            <div style="font-size:10px;color:#5a7a9f">CO&#8322; This Month</div>
+          </div>
+          <div style="background:#0a1525;border-radius:6px;padding:8px;text-align:center;border:1px solid #1e3a5f">
+            <div style="font-size:16px;font-weight:700;color:#ff9800">&#x20B9;1.07 L</div>
+            <div style="font-size:10px;color:#5a7a9f">Fuel Cost Saved</div>
+          </div>
+        </div>
+        <div class="carbon-badges">
+          <span class="cbadge">&#x2705; Smart Cities KPI</span>
+          <span class="cbadge">&#x2705; ISO 14064</span>
+          <span class="cbadge">&#x2705; UN SDG 11</span>
+          <span class="cbadge">&#x2705; UN SDG 3.6</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAINTENANCE -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">&#x1F527; Road Maintenance AI</span>
+        <button class="btn-xs btn-blue">Export GeoJSON</button>
+      </div>
+      <div class="panel-body" id="maintenancePanel">
+        <div style="font-size:10px;color:#5a7a9f;margin-bottom:8px;font-weight:700">DAMAGE HOTSPOTS DETECTED</div>
+        <div class="maintenance-row">
+          <div style="flex:1">
+            <div style="font-size:11px;font-weight:700;color:#ff4444">Near J9 Lane 2</div>
+            <div style="font-size:10px;color:#7a9abf">14 hard-brakes &middot; Pothole</div>
+            <div style="margin-top:4px"><div class="conf-bar" style="width:92%;background:linear-gradient(90deg,#ff4444,#ff2200)"></div></div>
+          </div>
+          <div style="text-align:right">
+            <span style="font-size:11px;font-weight:700;color:#ff4444">92%</span>
+            <button class="btn-xs btn-red" style="display:block;margin-top:4px">Work Order</button>
+          </div>
+        </div>
+        <div class="maintenance-row">
+          <div style="flex:1">
+            <div style="font-size:11px;font-weight:700;color:#ff9800">MG Road 500m N</div>
+            <div style="font-size:10px;color:#7a9abf">8 hard-brakes &middot; Road Crack</div>
+            <div style="margin-top:4px"><div class="conf-bar" style="width:74%;background:linear-gradient(90deg,#ff9800,#ff6600)"></div></div>
+          </div>
+          <div style="text-align:right">
+            <span style="font-size:11px;font-weight:700;color:#ff9800">74%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CYBERSECURITY -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">&#x1F512; Cybersecurity Module</span>
+      </div>
+      <div class="panel-body">
+        <div style="text-align:center;padding:8px 0">
+          <div style="font-size:36px;font-weight:700;color:#00e676" id="sec-status">SECURE</div>
+          <div style="font-size:11px;color:#5a7a9f">System integrity: verified</div>
+        </div>
+        <div class="alert-item alert-ok" style="margin-bottom:6px">
+          <div class="alert-icon">&#x1F510;</div>
+          <div class="alert-text">
+            <div class="t" id="sec-verified">All commands verified</div>
+            <div class="s">HMAC signatures valid &middot; No anomalies</div>
+          </div>
+        </div>
+        <div class="alert-item alert-warn">
+          <div class="alert-icon">&#x26A0;&#xFE0F;</div>
+          <div class="alert-text">
+            <div class="t">Rate limit triggered &mdash; J4 at 11:02</div>
+            <div class="s">3 rapid phase changes &middot; Auto-blocked &middot; Logged</div>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <div class="progress-row">
+            <div class="progress-label"><span>API Auth Rate</span><span>100%</span></div>
+            <div class="progress-bar"><div class="progress-fill fill-green" style="width:100%"></div></div>
+          </div>
+          <div class="progress-row">
+            <div class="progress-label"><span>Anomaly Score</span><span>3/100</span></div>
+            <div class="progress-bar"><div class="progress-fill fill-green" style="width:3%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- end second bottom-row -->
+
+</div><!-- end main-grid -->
+</div><!-- end authority tab -->
+
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- TAB 2: CITIZEN PORTAL                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div id="tab-citizen" style="display:none;padding:24px;max-width:900px;margin:0 auto">
+  <div style="text-align:center;margin-bottom:24px">
+    <div style="font-size:28px;font-weight:700;color:#00d4ff">&#x1F3D9; NEXUS CITY TRAFFIC</div>
+    <div style="font-size:14px;color:#5a7a9f">Real-Time Traffic Intelligence for Citizens</div>
+  </div>
+
+  <div class="citizen-card">
+    <div style="font-size:13px;font-weight:700;color:#e0e6f0;margin-bottom:10px">How's my commute today?</div>
+    <div class="citizen-route">
+      <div class="route-box">&#x1F4CD; Civil Lines</div>
+      <div style="color:#5a7a9f">&rarr;</div>
+      <div class="route-box">&#x1F4CD; Connaught Place</div>
+      <button class="btn-xs btn-blue" style="padding:5px 14px">CHECK</button>
+    </div>
+    <div class="route-result result-good">
+      &#x1F7E2; GOOD &mdash; Estimated travel time: <strong>22 minutes</strong> &middot; No incidents on your route &middot; Leave before 17:30 to avoid surge
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Active Alerts &#x1F514;</span></div>
+      <div class="panel-body">
+        <div class="alert-item alert-danger">
+          <div class="alert-icon">&#x1F534;</div>
+          <div class="alert-text">
+            <div class="t">Junction 7 area &mdash; 5 min delay</div>
+            <div class="s">Minor congestion &middot; AI adjusting signals</div>
+          </div>
+        </div>
+        <div class="alert-item alert-info">
+          <div class="alert-icon">&#x1F535;</div>
+          <div class="alert-text">
+            <div class="t">Emergency vehicle on Ring Road</div>
+            <div class="s">Keep clear &middot; All signals pre-adjusted</div>
+          </div>
+        </div>
+        <div class="alert-item alert-warn">
+          <div class="alert-icon">&#x1F687;</div>
+          <div class="alert-text">
+            <div class="t">Metro surge forecast at 17:45</div>
+            <div class="s">LSTM predicts congestion near Station 3</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">30-Minute Forecast (LSTM) &#x1F52E;</span></div>
+      <div class="panel-body">
+        <div class="zone-row">
+          <span class="zone-name">Zone A</span>
+          <div class="bar-wrap" style="flex:1"><div class="bar-val" style="width:67%;background:linear-gradient(90deg,#ff9800,#ff6600);color:white">67% Moderate</div></div>
+        </div>
+        <div style="height:6px"></div>
+        <div class="zone-row">
+          <span class="zone-name">Zone B</span>
+          <div class="bar-wrap" style="flex:1"><div class="bar-val" style="width:48%;background:linear-gradient(90deg,#00d4ff,#0088cc);color:white">48% Light</div></div>
+        </div>
+        <div style="height:6px"></div>
+        <div class="zone-row">
+          <span class="zone-name">Zone C</span>
+          <div class="bar-wrap" style="flex:1"><div class="bar-val" style="width:81%;background:linear-gradient(90deg,#ff2244,#cc0022);color:white">81% HEAVY &#x26A0;</div></div>
+        </div>
+        <div style="height:6px"></div>
+        <div class="zone-row">
+          <span class="zone-name">Zone D</span>
+          <div class="bar-wrap" style="flex:1"><div class="bar-val" style="width:32%;background:linear-gradient(90deg,#00e676,#00b04f);color:white">32% Clear</div></div>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:#5a7a9f;font-style:italic">Predictions from Seq2Seq LSTM &middot; 30-min horizon</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header"><span class="panel-title">&#x1F30D; Today's City Impact</span></div>
+    <div class="panel-body" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center">
+      <div><div style="font-size:24px;font-weight:700;color:#00e676">14.2 kg</div><div style="font-size:11px;color:#5a7a9f">CO&#8322; Saved</div></div>
+      <div><div style="font-size:24px;font-weight:700;color:#00d4ff">67 L</div><div style="font-size:11px;color:#5a7a9f">Fuel Saved</div></div>
+      <div><div style="font-size:24px;font-weight:700;color:#ff9800">1,426</div><div style="font-size:11px;color:#5a7a9f">Minutes Saved</div></div>
+      <div><div style="font-size:24px;font-weight:700;color:#ff6b35">&darr;17%</div><div style="font-size:11px;color:#5a7a9f">Commute Reduction</div></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- TAB 3: AI ANALYTICS                                               -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div id="tab-ai" style="display:none;padding:20px;max-width:1200px;margin:0 auto">
+  <div style="text-align:center;margin-bottom:20px">
+    <div style="font-size:22px;font-weight:700;color:#00d4ff;letter-spacing:2px">&#x1F9E0; AI / ML Analytics Center</div>
+    <div style="font-size:12px;color:#5a7a9f">Deep Reinforcement Learning &middot; LSTM Forecasting &middot; Anomaly Detection &middot; Explainable AI</div>
+  </div>
+
+  <!-- AI METRIC CARDS -->
+  <div class="ai-metric-grid">
+    <div class="ai-metric">
+      <div class="ai-val" style="color:#00e676" id="ai-r2">--</div>
+      <div class="ai-lbl">LSTM R&#178; Score</div>
+    </div>
+    <div class="ai-metric">
+      <div class="ai-val" style="color:#00d4ff" id="ai-mae">--</div>
+      <div class="ai-lbl">LSTM MAE</div>
+    </div>
+    <div class="ai-metric">
+      <div class="ai-val" style="color:#ff9800" id="ai-f1">--</div>
+      <div class="ai-lbl">Anomaly F1 Score</div>
+    </div>
+    <div class="ai-metric">
+      <div class="ai-val" style="color:#00e676" id="ai-gpu">--</div>
+      <div class="ai-lbl">GPU Status</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+    <!-- MODELS STATUS -->
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">&#x1F916; AI Models Status</span></div>
+      <div class="panel-body" id="ai-models-list" style="font-size:12px;line-height:2.2">
+        <div style="color:#5a7a9f">Loading model status...</div>
+      </div>
+    </div>
+
+    <!-- AI DECISION EXPLAINER -->
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">&#x1F50D; AI Decision Explanation</span></div>
+      <div class="panel-body" id="ai-explain-panel" style="font-size:12px;line-height:1.8">
+        <div style="color:#5a7a9f">Fetching explanation...</div>
+      </div>
+    </div>
+
+    <!-- LSTM TRAINING CHART -->
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">&#x1F4C8; LSTM Training Loss</span></div>
+      <div class="panel-body">
+        <canvas id="lstmChart" style="width:100%;height:240px"></canvas>
+      </div>
+    </div>
+
+    <!-- FEATURE IMPORTANCE -->
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">&#x1F4CA; Feature Importance (XAI)</span></div>
+      <div class="panel-body" id="xai-panel" style="font-size:12px">
+        <div style="color:#5a7a9f">Loading importance analysis...</div>
+      </div>
+    </div>
+
+    <!-- ANOMALY DETECTION -->
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">&#x1F50E; Anomaly Detection Results</span></div>
+      <div class="panel-body" id="anomaly-panel" style="font-size:12px">
+        <div style="color:#5a7a9f">Loading detection results...</div>
+      </div>
+    </div>
+
+    <!-- AGENT COMPARISON -->
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">&#x2694;&#xFE0F; Agent Comparison (DQN vs PPO vs A2C)</span></div>
+      <div class="panel-body" id="comparison-panel" style="font-size:12px">
+        <div style="color:#5a7a9f">Loading comparison...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- TAB 4: SYSTEM ARCHITECTURE                                        -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div id="tab-arch" style="display:none;padding:20px">
+  <div class="arch-title">NEXUS-ATMS &mdash; Complete System Architecture</div>
+
+  <!-- Layer 1 -->
+  <div style="margin-bottom:6px;font-size:10px;font-weight:700;color:#ff6b35;letter-spacing:2px;text-transform:uppercase;border-left:3px solid #ff6b35;padding-left:8px">Layer 1 &mdash; Data Ingestion</div>
+  <div class="arch-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:4px">
+    <div class="arch-layer"><div class="icon">&#x1F4F7;</div><div class="name">Traffic Cameras</div><div class="desc">YOLOv8 vehicle detection &middot; OpenCV</div></div>
+    <div class="arch-layer"><div class="icon">&#x1F697;</div><div class="name">SUMO Simulator</div><div class="desc">TraCI API &middot; 16 junctions &middot; 4&times;4 grid</div></div>
+    <div class="arch-layer"><div class="icon">&#x1F4E1;</div><div class="name">IoT Sensors</div><div class="desc">MQTT &middot; Loop detectors &middot; Queue counters</div></div>
+    <div class="arch-layer"><div class="icon">&#x1F326;&#xFE0F;</div><div class="name">Weather API</div><div class="desc">Rain/fog/heat adjustments</div></div>
+    <div class="arch-layer"><div class="icon">&#x1F687;</div><div class="name">Transit GTFS</div><div class="desc">Metro/Bus schedules &middot; Surge alerts</div></div>
+  </div>
+  <div class="arch-arrow">&darr; &darr; &darr; &darr; &darr;</div>
+
+  <!-- Layer 2 -->
+  <div style="margin-bottom:6px;font-size:10px;font-weight:700;color:#00d4ff;letter-spacing:2px;text-transform:uppercase;border-left:3px solid #00d4ff;padding-left:8px">Layer 2 &mdash; AI Processing Engine</div>
+  <div class="arch-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:4px">
+    <div class="arch-layer" style="border-color:#00d4ff44"><div class="icon">&#x1F9E0;</div><div class="name">DQN / PPO Agent</div><div class="desc">Stable-Baselines3 &middot; GPU &middot; Signal control</div></div>
+    <div class="arch-layer" style="border-color:#00d4ff44"><div class="icon">&#x1F4C8;</div><div class="name">LSTM Predictor</div><div class="desc">Seq2Seq Encoder-Decoder &middot; 30-min forecast</div></div>
+    <div class="arch-layer" style="border-color:#00d4ff44"><div class="icon">&#x1F3AF;</div><div class="name">YOLOv8 Vision</div><div class="desc">Vehicle detection &middot; Speed estimation</div></div>
+    <div class="arch-layer" style="border-color:#00d4ff44"><div class="icon">&#x1F50D;</div><div class="name">Anomaly Detector</div><div class="desc">IsolationForest + Autoencoder ensemble</div></div>
+    <div class="arch-layer" style="border-color:#00d4ff44"><div class="icon">&#x1F52E;</div><div class="name">Explainable AI</div><div class="desc">SHAP &middot; Gradient saliency &middot; Permutation</div></div>
+  </div>
+  <div class="arch-arrow">&darr;</div>
+
+  <!-- Layer 3 -->
+  <div style="margin-bottom:6px;font-size:10px;font-weight:700;color:#ff9800;letter-spacing:2px;text-transform:uppercase;border-left:3px solid #ff9800;padding-left:8px">Layer 3 &mdash; Specialty Modules</div>
+  <div class="arch-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:4px">
+    <div class="arch-layer" style="border-color:#ff980044"><div class="icon">&#x1F691;</div><div class="name">Emergency Engine</div><div class="desc">A* path planning &middot; Signal cascade</div></div>
+    <div class="arch-layer" style="border-color:#ff980044"><div class="icon">&#x1F331;</div><div class="name">Carbon Engine</div><div class="desc">ISO 14064 &middot; PDF certificates &middot; ESG</div></div>
+    <div class="arch-layer" style="border-color:#ff980044"><div class="icon">&#x1F4AC;</div><div class="name">NL Command</div><div class="desc">spaCy intent parsing &middot; English control</div></div>
+    <div class="arch-layer" style="border-color:#ff980044"><div class="icon">&#x1F510;</div><div class="name">Cybersecurity</div><div class="desc">HMAC signing &middot; Rate limiting &middot; Audit</div></div>
+  </div>
+  <div class="arch-arrow">&darr;</div>
+
+  <!-- Layer 4 -->
+  <div style="margin-bottom:6px;font-size:10px;font-weight:700;color:#00e676;letter-spacing:2px;text-transform:uppercase;border-left:3px solid #00e676;padding-left:8px">Layer 4 &mdash; Backend</div>
+  <div class="arch-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:4px">
+    <div class="arch-layer" style="border-color:#00e67644"><div class="icon">&#x26A1;</div><div class="name">FastAPI + WebSockets</div><div class="desc">30+ REST endpoints &middot; 1 Hz live stream</div></div>
+    <div class="arch-layer" style="border-color:#00e67644"><div class="icon">&#x1F5C4;&#xFE0F;</div><div class="name">Data Storage</div><div class="desc">JSON logs &middot; Model checkpoints &middot; NPZ</div></div>
+    <div class="arch-layer" style="border-color:#00e67644"><div class="icon">&#x1F4CB;</div><div class="name">Audit Trail</div><div class="desc">Every AI decision logged &middot; Reversible</div></div>
+  </div>
+  <div class="arch-arrow">&darr;</div>
+
+  <!-- Layer 5 -->
+  <div style="margin-bottom:6px;font-size:10px;font-weight:700;color:#a855f7;letter-spacing:2px;text-transform:uppercase;border-left:3px solid #a855f7;padding-left:8px">Layer 5 &mdash; Presentation</div>
+  <div class="arch-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+    <div class="arch-layer" style="border-color:#a855f744"><div class="icon">&#x1F5A5;&#xFE0F;</div><div class="name">Pygame Digital Twin</div><div class="desc">60fps animated city &middot; Heatmap overlay</div></div>
+    <div class="arch-layer" style="border-color:#a855f744"><div class="icon">&#x2699;&#xFE0F;</div><div class="name">Authority Dashboard</div><div class="desc">Full control &middot; Live charts &middot; Override</div></div>
+    <div class="arch-layer" style="border-color:#a855f744"><div class="icon">&#x1F465;</div><div class="name">Citizen Portal</div><div class="desc">Public read-only &middot; Route predictor</div></div>
+  </div>
+
+  <!-- KEY METRICS -->
+  <div style="background:#0d1528;border:1px solid #1e3a5f;border-radius:10px;padding:16px">
+    <div style="font-size:12px;font-weight:700;color:#00d4ff;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">System Performance Metrics</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;text-align:center">
+      <div><div style="font-size:28px;font-weight:700;color:#00e676">&darr;98%</div><div style="font-size:11px;color:#5a7a9f">Wait Time Reduction</div></div>
+      <div><div style="font-size:28px;font-weight:700;color:#00d4ff">&darr;91%</div><div style="font-size:11px;color:#5a7a9f">Queue Length Reduction</div></div>
+      <div><div style="font-size:28px;font-weight:700;color:#ff9800">0.91</div><div style="font-size:11px;color:#5a7a9f">Anomaly F1 Score</div></div>
+      <div><div style="font-size:28px;font-weight:700;color:#ff6b35">0.61</div><div style="font-size:11px;color:#5a7a9f">LSTM R&#178; Score</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip-hint">Click tabs to switch views &middot; Click junctions in signal grid to toggle &middot; Real-time data via WebSocket</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script>
+// ==================================================================
+//  CLOCK
+// ==================================================================
+function updateClock() {
+  var now = new Date();
+  var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var d = days[now.getDay()] + ' ' + months[now.getMonth()] + ' ' + String(now.getDate()).padStart(2,'0') + ' ' + now.getFullYear();
+  var t = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent = d + ' \u2014 ' + t;
+}
+setInterval(updateClock, 1000); updateClock();
+
+// ==================================================================
+//  TABS
+// ==================================================================
+function showTab(tab) {
+  ['authority','citizen','ai','arch'].forEach(function(t) {
+    document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-tab').forEach(function(el, i) {
+    el.classList.toggle('active', ['authority','citizen','ai','arch'][i] === tab);
+  });
+  if (tab === 'ai') loadAIData();
+}
+
+// ==================================================================
+//  SIGNAL GRID
+// ==================================================================
+var junctions = [];
+for (var i = 0; i < 16; i++) {
+  junctions.push({
+    id: 'J' + (i+1),
+    state: ['green','red','green','red','red','green','amber','green','red','green','blue','red','green','amber','blue','green'][i],
+    queue: Math.floor(Math.random()*15)+1,
+    wait: Math.floor(Math.random()*60)+5,
+    ai: true
+  });
+}
+
+function buildSignalGrid() {
+  var grid = document.getElementById('signalGrid');
+  grid.innerHTML = '';
+  junctions.forEach(function(j, idx) {
+    var cell = document.createElement('div');
+    cell.className = 'signal-cell' + (j.state==='blue'?' emergency':'');
+    cell.innerHTML =
+      '<div class="signal-dot sig-' + j.state + '"></div>' +
+      '<div class="jname">' + j.id + '</div>' +
+      '<div class="jqueue">Q: ' + j.queue + '</div>' +
+      '<div class="jwait">' + j.wait + 's wait</div>' +
+      '<div class="jai">' + (j.ai ? '\uD83E\uDD16 AI' : '\u26A0 MANUAL') + '</div>';
+    cell.onclick = (function(idx2) { return function() {
+      var c = ['green','amber','red','blue'];
+      junctions[idx2].state = c[(c.indexOf(junctions[idx2].state)+1)%c.length];
+      buildSignalGrid(); drawCity();
+    };})(idx);
+    grid.appendChild(cell);
+  });
+}
+
+function allRed() { junctions.forEach(function(j){j.state='red';j.ai=false;}); buildSignalGrid(); drawCity(); }
+function aiResume() {
+  var s=['green','red','green','red','red','green','amber','green','red','green','blue','red','green','amber','blue','green'];
+  junctions.forEach(function(j,i){j.state=s[i];j.ai=true;}); buildSignalGrid(); drawCity();
+}
+buildSignalGrid();
+
+// ==================================================================
+//  DIGITAL TWIN CANVAS
+// ==================================================================
+var canvas = document.getElementById('cityCanvas');
+var ctx = canvas.getContext('2d');
+var COLS=4, ROWS=4, PAD=60;
+var vehicles = [];
+
+function resizeCanvas() { canvas.width=canvas.offsetWidth; canvas.height=canvas.offsetHeight; }
+resizeCanvas();
+
+function junctionPos(col,row) {
+  var w=canvas.width-PAD*2, h=canvas.height-PAD*2;
+  return { x:PAD+(col/(COLS-1))*w, y:PAD+(row/(ROWS-1))*h };
+}
+
+function initVehicles() {
+  vehicles = [];
+  for (var i=0;i<60;i++) {
+    var isH=Math.random()>0.5, row=Math.floor(Math.random()*ROWS), col=Math.floor(Math.random()*COLS);
+    var p = junctionPos(col,row);
+    vehicles.push({
+      x: isH ? Math.random()*canvas.width : p.x+(Math.random()-0.5)*8,
+      y: isH ? p.y+(Math.random()-0.5)*8 : Math.random()*canvas.height,
+      vx: isH ? (Math.random()-0.5)*3 : 0,
+      vy: isH ? 0 : (Math.random()-0.5)*3,
+      type: Math.random()>0.8 ? 'bus' : (Math.random()>0.9 ? 'truck' : 'car'),
+      row:row, col:col, isH:isH
+    });
+  }
+  vehicles.push({ x:junctionPos(0,1).x, y:junctionPos(0,1).y, vx:2.5, vy:0, type:'ambulance', isH:true, isEmergency:true });
+}
+
+function drawCity() {
+  if(!ctx) return;
+  var w=canvas.width, h=canvas.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='#07101f'; ctx.fillRect(0,0,w,h);
+
+  // Roads
+  ctx.lineWidth=18; ctx.strokeStyle='#1a2840'; ctx.lineCap='round';
+  for(var r=0;r<ROWS;r++){var p1=junctionPos(0,r); ctx.beginPath();ctx.moveTo(0,p1.y);ctx.lineTo(w,p1.y);ctx.stroke();}
+  for(var c2=0;c2<COLS;c2++){var p2=junctionPos(c2,0); ctx.beginPath();ctx.moveTo(p2.x,0);ctx.lineTo(p2.x,h);ctx.stroke();}
+
+  // Lane markings
+  ctx.lineWidth=1; ctx.strokeStyle='#243854'; ctx.setLineDash([12,10]);
+  for(var r2=0;r2<ROWS;r2++){var p3=junctionPos(0,r2); ctx.beginPath();ctx.moveTo(0,p3.y);ctx.lineTo(w,p3.y);ctx.stroke();}
+  for(var c3=0;c3<COLS;c3++){var p4=junctionPos(c3,0); ctx.beginPath();ctx.moveTo(p4.x,0);ctx.lineTo(p4.x,h);ctx.stroke();}
+  ctx.setLineDash([]);
+
+  // Emergency corridor glow (row 1)
+  var grd=ctx.createLinearGradient(0,0,w,0);
+  grd.addColorStop(0,'rgba(0,136,255,0)');grd.addColorStop(0.3,'rgba(0,136,255,0.18)');grd.addColorStop(0.7,'rgba(0,136,255,0.18)');grd.addColorStop(1,'rgba(0,136,255,0)');
+  ctx.fillStyle=grd; var corrY=junctionPos(0,1).y; ctx.fillRect(0,corrY-10,w,20);
+
+  // Junction signals
+  var sigC={green:'#00e676',red:'#ff2244',amber:'#ff9800',blue:'#00aaff'};
+  junctions.forEach(function(j,idx){
+    var col2=idx%COLS, row2=Math.floor(idx/COLS), pos=junctionPos(col2,row2), clr=sigC[j.state]||'#888';
+    ctx.fillStyle='#0d1528'; ctx.fillRect(pos.x-14,pos.y-14,28,28);
+    ctx.strokeStyle=j.state==='blue'?'#0088ff':'#1e3a5f'; ctx.lineWidth=j.state==='blue'?2:1; ctx.strokeRect(pos.x-14,pos.y-14,28,28);
+    ctx.beginPath(); ctx.arc(pos.x,pos.y,7,0,Math.PI*2); ctx.fillStyle=clr; ctx.shadowColor=clr; ctx.shadowBlur=10; ctx.fill(); ctx.shadowBlur=0;
+    ctx.fillStyle='#5a7a9f'; ctx.font='9px Segoe UI'; ctx.textAlign='center'; ctx.fillText(j.id,pos.x,pos.y+22);
+  });
+
+  // Vehicles
+  var vColors={car:'#ffd700',bus:'#4488ff',truck:'#ff8c00',ambulance:'#ffffff'};
+  var vSizes={car:5,bus:8,truck:7,ambulance:6};
+  vehicles.forEach(function(v){
+    ctx.save(); ctx.translate(v.x,v.y);
+    if(v.isEmergency){ctx.shadowColor='#0088ff';ctx.shadowBlur=12;}
+    ctx.fillStyle=vColors[v.type]||'#ffd700'; ctx.beginPath(); ctx.arc(0,0,vSizes[v.type]||5,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0; ctx.restore();
+  });
+
+  // HUD
+  ctx.fillStyle='rgba(7,16,31,0.7)'; ctx.fillRect(0,h-36,w,36);
+  ctx.font='11px Segoe UI'; ctx.textAlign='left'; ctx.fillStyle='#5a7a9f'; ctx.fillText('Vehicles: '+vehicles.length,12,h-18);
+  ctx.textAlign='center'; ctx.fillStyle='#00e676'; ctx.fillText('AI ACTIVE \u2014 All 16 Junctions Monitored',w/2,h-18);
+  ctx.textAlign='right'; ctx.fillStyle='#0088ff'; ctx.fillText('\uD83D\uDD35 EMERGENCY CORRIDOR ACTIVE',w-12,h-18);
+}
+
+function moveVehicles() {
+  var w=canvas.width, h=canvas.height;
+  vehicles.forEach(function(v){
+    if(v.isEmergency){v.x+=v.vx;if(v.x>w+20)v.x=-10;return;}
+    v.x+=v.vx;v.y+=v.vy;
+    if(v.x>w+20)v.x=-10;if(v.x<-20)v.x=w+10;if(v.y>h+20)v.y=-10;if(v.y<-20)v.y=h+10;
+    if(Math.random()<0.02){if(v.isH)v.vx+=(Math.random()-0.5)*0.4;else v.vy+=(Math.random()-0.5)*0.4;v.vx=Math.max(-3,Math.min(3,v.vx));v.vy=Math.max(-3,Math.min(3,v.vy));}
+  });
+}
+
+var tick=0;
+function animateSignals() {
+  tick++;
+  if(tick%90===0){
+    [1,4,9,11,13].forEach(function(i){if(junctions[i].state!=='blue')junctions[i].state=junctions[i].state==='green'?'red':'green';});
+    junctions.forEach(function(j){
+      if(j.state==='red')j.queue=Math.min(20,j.queue+Math.floor(Math.random()*3));
+      else j.queue=Math.max(0,j.queue-Math.floor(Math.random()*4));
+      j.wait=j.queue*4+Math.floor(Math.random()*8);
+    });
+    buildSignalGrid();
+  }
+}
+
+function animationLoop(){resizeCanvas();moveVehicles();drawCity();animateSignals();requestAnimationFrame(animationLoop);}
+initVehicles(); animationLoop();
+window.addEventListener('resize',function(){resizeCanvas();initVehicles();});
+
+// ==================================================================
+//  WEBSOCKET  LIVE DATA
+// ==================================================================
+function connectWS() {
+  var proto = location.protocol==='https:'?'wss':'ws';
+  var ws = new WebSocket(proto + '://' + location.host + '/ws/live');
+  ws.onopen = function() {
+    document.getElementById('connBadge').textContent = '\u25CF LIVE';
+    document.getElementById('connBadge').style.background = '#ff2244';
+  };
+  ws.onmessage = function(e) {
+    try {
+      var d = JSON.parse(e.data);
+      if(d.traffic) {
+        var t = d.traffic;
+        document.getElementById('avgwait').textContent = (t.avg_waiting_time||0).toFixed(1)+'s';
+        document.getElementById('vcount').textContent = (t.total_queue||0).toFixed(0);
+        document.getElementById('throughput').textContent = (t.throughput||0).toFixed(0);
+        document.getElementById('phase-display').textContent = t.phase||'--';
+      }
+      if(d.carbon) {
+        document.getElementById('co2-saved').textContent = (d.carbon.co2_saved_kg||14.2).toFixed(1)+' kg';
+      }
+    } catch(err) { console.error(err); }
+  };
+  ws.onclose = function() {
+    document.getElementById('connBadge').textContent = '\u25CF RECONNECT';
+    document.getElementById('connBadge').style.background = '#ff9800';
+    setTimeout(connectWS, 3000);
+  };
+  ws.onerror = function() { ws.close(); };
+}
+connectWS();
+
+// ==================================================================
+//  NL COMMAND
+// ==================================================================
+function sendNL() {
+  var text = document.getElementById('nlInput').value.trim();
+  if(!text) return;
+  fetch('/api/nl/command', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({text:text})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    document.getElementById('nlResult').style.display='';
+    document.getElementById('nl-intent').textContent = d.intent||'unknown';
+    document.getElementById('nl-target').textContent = (d.junctions||[]).join(', ')||d.raw_text||'--';
+    document.getElementById('nl-conf').textContent = ((d.confidence||0)*100).toFixed(0)+'%';
+  })
+  .catch(function(e){ console.error(e); });
+}
+
+function downloadCert() { window.open('/api/carbon/certificate','_blank'); }
+
+// ==================================================================
+//  AI ANALYTICS TAB  DATA LOADING
+// ==================================================================
+function fetchJ(url) {
+  return fetch(url).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+}
+
+var lstmChartObj = null;
+
+function loadAIData() {
+  // 1. AI Status
+  fetchJ('/api/ai/status').then(function(status){
+    if(!status) return;
+    var el=document.getElementById('ai-models-list'); var h='';
+    var models = status.models||{};
+    Object.keys(models).forEach(function(n){
+      var ok=models[n];
+      h+='<div>'+(ok?'\u2705':'\u2B1C')+' <span style="color:'+(ok?'#00e676':'#5a7a9f')+'">'+n.replace(/_/g,' ')+'</span></div>';
+    });
+    h+='<div style="margin-top:8px;padding:6px;background:#001a08;border-radius:5px;border-left:3px solid #00e676;color:#00e676">'+status.trained_count+'/'+status.total_count+' models ready</div>';
+    el.innerHTML=h;
+    var gpu=status.gpu_available||{};
+    document.getElementById('ai-gpu').textContent=gpu.available?'\uD83D\uDFE2 CUDA':'\uD83D\uDD34 CPU';
+    document.getElementById('ai-gpu').style.color=gpu.available?'#00e676':'#ff4444';
+  });
+
+  // 2. LSTM Results
+  fetchJ('/api/ai/lstm/results').then(function(lstm){
+    if(!lstm || !lstm.test_metrics) return;
+    document.getElementById('ai-r2').textContent = (lstm.test_metrics.R2||0).toFixed(4);
+    document.getElementById('ai-mae').textContent = (lstm.test_metrics.MAE||0).toFixed(4);
+    if(lstm.history && lstm.history.train_loss) {
+      var c2=document.getElementById('lstmChart');
+      if(lstmChartObj) lstmChartObj.destroy();
+      lstmChartObj = new Chart(c2,{
+        type:'line',
+        data:{
+          labels:lstm.history.train_loss.map(function(_,i){return i+1;}),
+          datasets:[
+            {label:'Train Loss',data:lstm.history.train_loss,borderColor:'#00d4ff',borderWidth:2,pointRadius:0,tension:.3,fill:false},
+            {label:'Val Loss',data:lstm.history.val_loss,borderColor:'#ff9800',borderWidth:2,pointRadius:0,tension:.3,fill:false}
+          ]
+        },
+        options:{
+          responsive:true,maintainAspectRatio:false,
+          scales:{
+            x:{title:{display:true,text:'Epoch',color:'#5a7a9f'},ticks:{color:'#5a7a9f'},grid:{color:'#1e3a5f'}},
+            y:{title:{display:true,text:'MSE Loss',color:'#5a7a9f'},ticks:{color:'#5a7a9f'},grid:{color:'#1e3a5f'}}
+          },
+          plugins:{legend:{labels:{color:'#e0e6f0'}}}
+        }
+      });
+    }
+  });
+
+  // 3. Anomaly Results
+  fetchJ('/api/ai/anomaly/results').then(function(anom){
+    if(!anom || anom.f1_score===undefined) return;
+    document.getElementById('ai-f1').textContent = anom.f1_score.toFixed(4);
+    var ap = document.getElementById('anomaly-panel');
+    ap.innerHTML =
+      '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px">' +
+        '<div style="background:#0a1525;border:1px solid #1e3a5f;border-radius:6px;padding:10px;text-align:center">' +
+          '<div style="font-size:20px;font-weight:700;color:#00e676">'+anom.precision.toFixed(4)+'</div>' +
+          '<div style="font-size:10px;color:#5a7a9f">Precision</div>' +
+        '</div>' +
+        '<div style="background:#0a1525;border:1px solid #1e3a5f;border-radius:6px;padding:10px;text-align:center">' +
+          '<div style="font-size:20px;font-weight:700;color:#00d4ff">'+anom.recall.toFixed(4)+'</div>' +
+          '<div style="font-size:10px;color:#5a7a9f">Recall</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="font-size:11px;color:#7a9abf;margin-bottom:6px">Confusion Matrix:</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;text-align:center">' +
+        '<div style="background:#001a08;border-radius:4px;padding:6px">TN: '+anom.true_negatives+'</div>' +
+        '<div style="background:#1a0010;border-radius:4px;padding:6px">FP: '+anom.false_positives+'</div>' +
+        '<div style="background:#1a1500;border-radius:4px;padding:6px">FN: '+anom.false_negatives+'</div>' +
+        '<div style="background:#001a08;border-radius:4px;padding:6px">TP: '+anom.true_positives+'</div>' +
+      '</div>' +
+      '<div style="margin-top:8px;font-size:11px;color:#5a7a9f">Ensemble: Z-Score + IsolationForest + Autoencoder</div>';
+  });
+
+  // 4. XAI Feature Importance
+  fetchJ('/api/ai/xai/importance').then(function(xai){
+    if(!xai || !xai.permutation_importance) {
+      document.getElementById('xai-panel').innerHTML='<div style="color:#5a7a9f">Run XAI analysis to populate importance data</div>';
+      return;
+    }
+    var el2=document.getElementById('xai-panel'); var h2='';
+    var entries=Object.entries(xai.permutation_importance).slice(0,10);
+    entries.forEach(function(pair,i){
+      var name=pair[0], score=pair[1];
+      var wd=Math.round(score*100);
+      var color2=i<3?'#00d4ff':i<6?'#ff9800':'#5a7a9f';
+      h2+='<div style="margin:5px 0;display:flex;align-items:center;gap:8px">' +
+        '<span style="width:130px;text-align:right;font-size:11px;color:#7a9abf">'+name+'</span>' +
+        '<div style="flex:1;background:#0a1525;border-radius:3px;height:14px;overflow:hidden">' +
+          '<div style="width:'+wd+'%;height:100%;background:'+color2+';border-radius:3px;transition:width 1s"></div>' +
+        '</div>' +
+        '<span style="width:40px;font-size:11px;color:#e0e6f0;font-weight:700">'+score.toFixed(3)+'</span>' +
+      '</div>';
+    });
+    el2.innerHTML=h2;
+  });
+
+  // 5. AI Explanation
+  fetchJ('/api/ai/explain').then(function(expl){
+    if(!expl || expl.error) return;
+    var ep=document.getElementById('ai-explain-panel');
+    var h3='<div style="font-size:14px;font-weight:700;color:'+(expl.action_label==='SWITCH'?'#ff9800':'#00e676')+';margin-bottom:6px">Decision: '+expl.action_label+'</div>';
+    h3+='<div style="color:#7a9abf;margin-bottom:6px">'+expl.reason+'</div>';
+    h3+='<div style="color:#e0e6f0">Confidence: <span style="color:#00d4ff;font-weight:700">'+(expl.confidence*100).toFixed(1)+'%</span></div>';
+    if(expl.state_summary){
+      var q=expl.state_summary.queues||{};
+      h3+='<div style="margin-top:8px;padding:6px;background:#0a1525;border-radius:6px;font-size:11px">' +
+        'Queues \u2014 N:'+(q.North||0).toFixed(1)+' S:'+(q.South||0).toFixed(1)+' E:'+(q.East||0).toFixed(1)+' W:'+(q.West||0).toFixed(1) +
+      '</div>';
+    }
+    if(expl.top_factors && expl.top_factors.length){
+      h3+='<div style="margin-top:6px;font-size:11px;color:#00d4ff">Top factors: '+expl.top_factors.map(function(f){return f[0]+' ('+f[1].toFixed(2)+')';}).join(', ')+'</div>';
+    }
+    ep.innerHTML=h3;
+  });
+
+  // 6. Agent Comparison
+  fetchJ('/api/ai/comparison').then(function(comp){
+    if(!comp || !comp.agents) {
+      document.getElementById('comparison-panel').innerHTML='<div style="color:#5a7a9f">Run agent comparison to populate data</div>';
+      return;
+    }
+    var cp=document.getElementById('comparison-panel');
+    var h4='<table style="width:100%;font-size:11px;border-collapse:collapse">';
+    h4+='<tr style="color:#00d4ff;border-bottom:1px solid #1e3a5f"><th style="text-align:left;padding:4px">Agent</th><th>Reward</th><th>Wait</th><th>Queue</th></tr>';
+    Object.keys(comp.agents).forEach(function(name){
+      var dd=comp.agents[name];
+      var rw=typeof dd.mean_reward==='number'?dd.mean_reward.toFixed(1):'\u2014';
+      var wt=typeof dd.mean_waiting_time==='number'?dd.mean_waiting_time.toFixed(1):'\u2014';
+      var ql=typeof dd.mean_queue_length==='number'?dd.mean_queue_length.toFixed(1):'\u2014';
+      h4+='<tr style="border-bottom:1px solid #0f1e38"><td style="padding:4px;font-weight:700;color:#e0e6f0">'+name+'</td><td style="text-align:center;color:#00e676">'+rw+'</td><td style="text-align:center;color:#ff9800">'+wt+'</td><td style="text-align:center;color:#00d4ff">'+ql+'</td></tr>';
+    });
+    h4+='</table>';
+    cp.innerHTML=h4;
+  });
+}
+
+</script>
+</body>
+</html>

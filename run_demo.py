@@ -1,0 +1,146 @@
+"""
+One-Click Demo Script for Smart Traffic Management System
+Run training ➜ evaluation ➜ report ➜ dashboard in a single command.
+"""
+
+import argparse
+import os
+import sys
+import subprocess
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+from src.utils.logger import setup_logger
+
+
+def check_sumo() -> bool:
+    """Check if SUMO is installed and accessible."""
+    sumo_home = os.environ.get("SUMO_HOME")
+    if sumo_home and os.path.isdir(sumo_home):
+        return True
+    # Try running sumo --version
+    try:
+        subprocess.run(["sumo", "--version"], capture_output=True, timeout=5)
+        return True
+    except Exception:
+        return False
+
+
+def run_cmd(cmd: str, log, description: str) -> bool:
+    """Run a shell command, logging success/failure."""
+    log.info(f"▶ {description}")
+    log.info(f"  $ {cmd}")
+    result = os.system(cmd)
+    if result == 0:
+        log.info(f"  ✓ {description} complete")
+        return True
+    else:
+        log.error(f"  ✗ {description} failed (exit {result})")
+        return False
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="One-click demo: train → evaluate → report → dashboard"
+    )
+    parser.add_argument("--agent", type=str, default="ppo", choices=["dqn", "ppo"])
+    parser.add_argument("--timesteps", type=int, default=50000)
+    parser.add_argument("--dashboard-only", action="store_true",
+                        help="Skip training, just launch dashboard in demo mode")
+    parser.add_argument("--skip-dashboard", action="store_true",
+                        help="Run training + eval but don't launch dashboard")
+    parser.add_argument("--gui", action="store_true")
+    args = parser.parse_args()
+
+    log = setup_logger("demo", log_to_file=False)
+    py = sys.executable
+
+    log.info("=" * 60)
+    log.info("🚦 Smart Traffic Management System — Demo")
+    log.info("=" * 60)
+
+    # Dashboard-only mode
+    if args.dashboard_only:
+        log.info("Launching dashboard in demo mode (no SUMO required)...")
+        os.environ["DEMO_MODE"] = "true"
+        run_cmd(f"{py} dashboard/backend/main.py", log, "Dashboard")
+        return
+
+    # Full pipeline
+    has_sumo = check_sumo()
+    if not has_sumo:
+        log.warning("SUMO not found. Launching dashboard in demo mode instead.")
+        log.info("To run full pipeline, install SUMO and set SUMO_HOME.")
+        os.environ["DEMO_MODE"] = "true"
+        run_cmd(f"{py} dashboard/backend/main.py", log, "Dashboard (demo)")
+        return
+
+    log.info(f"SUMO detected ✓")
+    log.info(f"Agent: {args.agent.upper()} | Timesteps: {args.timesteps:,}")
+    log.info("")
+
+    # Step 1: Generate scenarios
+    run_cmd(f"{py} scripts/generate_scenarios.py --scenario all", log, "Generate Scenarios")
+
+    # Step 2: Train
+    ok = run_cmd(
+        f"{py} train.py --agent {args.agent} --timesteps {args.timesteps} --demo",
+        log, "Training"
+    )
+    if not ok:
+        log.error("Training failed. Launching dashboard in demo mode.")
+        os.environ["DEMO_MODE"] = "true"
+        run_cmd(f"{py} dashboard/backend/main.py", log, "Dashboard (demo)")
+        return
+
+    # Step 3: Find the latest model
+    model_dirs = sorted(Path("models").iterdir(), key=os.path.getmtime, reverse=True)
+    best_model = None
+    for md in model_dirs:
+        candidate = md / "best" / "best_model.zip"
+        if candidate.exists():
+            best_model = str(candidate)
+            break
+    if not best_model:
+        # Fallback to final model
+        for md in model_dirs:
+            for f in md.iterdir():
+                if f.suffix == ".zip":
+                    best_model = str(f)
+                    break
+            if best_model:
+                break
+
+    if not best_model:
+        log.error("No trained model found.")
+        return
+
+    log.info(f"Best model: {best_model}")
+
+    # Step 4: Evaluate
+    run_cmd(
+        f"{py} evaluate.py --model {best_model} --agent {args.agent} --report",
+        log, "Evaluation"
+    )
+
+    # Step 5: Generate report
+    run_cmd(f"{py} scripts/generate_report.py", log, "Report Generation")
+
+    log.info("")
+    log.info("=" * 60)
+    log.info("🎉 Demo Complete!")
+    log.info("  Results  → results/")
+    log.info("  Report   → results/report.html")
+    log.info("=" * 60)
+
+    # Step 6: Launch dashboard
+    if not args.skip_dashboard:
+        log.info("Launching dashboard...")
+        os.environ["DEMO_MODE"] = "true"
+        run_cmd(f"{py} dashboard/backend/main.py", log, "Dashboard")
+
+
+if __name__ == "__main__":
+    main()

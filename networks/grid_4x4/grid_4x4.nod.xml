@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nodes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/nodes_file.xsd">
+  <node id="J0_0" x="0" y="0" type="traffic_light"/>
+  <node id="J0_1" x="200" y="0" type="traffic_light"/>
+  <node id="J0_2" x="400" y="0" type="traffic_light"/>
+  <node id="J0_3" x="600" y="0" type="traffic_light"/>
+  <node id="J1_0" x="0" y="200" type="traffic_light"/>
+  <node id="J1_1" x="200" y="200" type="traffic_light"/>
+  <node id="J1_2" x="400" y="200" type="traffic_light"/>
+  <node id="J1_3" x="600" y="200" type="traffic_light"/>
+  <node id="J2_0" x="0" y="400" type="traffic_light"/>
+  <node id="J2_1" x="200" y="400" type="traffic_light"/>
+  <node id="J2_2" x="400" y="400" type="traffic_light"/>
+  <node id="J2_3" x="600" y="400" type="traffic_light"/>
+  <node id="J3_0" x="0" y="600" type="traffic_light"/>
+  <node id="J3_1" x="200" y="600" type="traffic_light"/>
+  <node id="J3_2" x="400" y="600" type="traffic_light"/>
+  <node id="J3_3" x="600" y="600" type="traffic_light"/>
+  <node id="N_in_0" x="0" y="800" type="priority"/>
+  <node id="S_in_0" x="0" y="-200" type="priority"/>
+  <node id="N_in_1" x="200" y="800" type="priority"/>
+  <node id="S_in_1" x="200" y="-200" type="priority"/>
+  <node id="N_in_2" x="400" y="800" type="priority"/>
+  <node id="S_in_2" x="400" y="-200" type="priority"/>
+  <node id="N_in_3" x="600" y="800" type="priority"/>
+  <node id="S_in_3" x="600" y="-200" type="priority"/>
+  <node id="W_in_0" x="-200" y="0" type="priority"/>
+  <node id="E_in_0" x="800" y="0" type="priority"/>
+  <node id="W_in_1" x="-200" y="200" type="priority"/>
+  <node id="E_in_1" x="800" y="200" type="priority"/>
+  <node id="W_in_2" x="-200" y="400" type="priority"/>
+  <node id="E_in_2" x="800" y="400" type="priority"/>
+  <node id="W_in_3" x="-200" y="600" type="priority"/>
+  <node id="E_in_3" x="800" y="600" type="priority"/>
+</nodes>

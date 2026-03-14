@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Traffic light program for the center intersection -->
+<additional>
+    <tlLogic id="center" type="static" programID="0" offset="0">
+        <!-- Phase 0: North-South Green (straight + right) -->
+        <phase duration="33" state="GGGgrrrrGGGgrrrr"/>
+        <!-- Phase 1: North-South Yellow -->
+        <phase duration="3"  state="yyyyrrrryyyyrrrr"/>
+        <!-- Phase 2: East-West Green (straight + right) -->
+        <phase duration="33" state="rrrrGGGgrrrrGGGg"/>
+        <!-- Phase 3: East-West Yellow -->
+        <phase duration="3"  state="rrrryyyyrrrryyyy"/>
+    </tlLogic>
+</additional>
