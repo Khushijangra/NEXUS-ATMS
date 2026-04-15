@@ -1759,7 +1759,7 @@ def health():
 
 @app.get("/ping")
 def ping():
-    return {"message": "pong"}
+    return {"status": "ok"}
 
 
 @app.get("/api/status")
@@ -3114,7 +3114,7 @@ async def startup():
         if live_runtime.fallback_triggered:
             logger.warning("[Startup] Fallback reason: %s", live_runtime.fallback_reason)
         logger.info("[Startup] Live runtime status: %s", live_runtime.status())
-        logger.info("[Startup] Server running at http://127.0.0.1:8000")
+        logger.info("[Startup] Server running at http://127.0.0.1:%s", os.getenv("PORT", "8000"))
     except Exception as exc:
         logger.exception("[Startup] Non-fatal startup error: %s", exc)
         try:
@@ -3137,7 +3137,8 @@ if __name__ == "__main__":
     if _import_errors:
         for mod, err in _import_errors.items():
             print(f"    [WARN] {mod}: {err}")
-    print(f"  Dashboard : http://localhost:8000")
-    print(f"  API Docs  : http://localhost:8000/docs")
+    port = int(os.getenv("PORT", 8000))
+    print(f"  Dashboard : http://localhost:{port}")
+    print(f"  API Docs  : http://localhost:{port}/docs")
     print("=" * 60)
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)), log_level="info")
