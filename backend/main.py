@@ -899,7 +899,7 @@ class LiveRuntime:
         self.debug_cv = os.getenv("DEBUG_CV", "false").lower() == "true"
         fail_fast_env = os.getenv("FAIL_FAST_VIDEO")
         if fail_fast_env is None:
-            fail_fast_env = os.getenv("FAIL_ON_MISSING_VIDEO", "true")
+            fail_fast_env = os.getenv("FAIL_ON_MISSING_VIDEO", "false")
         self.fail_fast_video = str(fail_fast_env).lower() not in {"0", "false", "no", "off"}
         self.video_init_retries = max(1, int(os.getenv("VIDEO_INIT_RETRIES", "5")))
         self.black_frame_mean_threshold = float(os.getenv("BLACK_FRAME_MEAN_THRESHOLD", "5.0"))
@@ -3114,7 +3114,7 @@ async def startup():
         if live_runtime.fallback_triggered:
             logger.warning("[Startup] Fallback reason: %s", live_runtime.fallback_reason)
         logger.info("[Startup] Live runtime status: %s", live_runtime.status())
-        logger.info("[Startup] Server running at http://127.0.0.1:%s", os.getenv("PORT", "8000"))
+        logger.info("[Startup] Server running at http://127.0.0.1:%s", os.getenv("PORT", "8080"))
     except Exception as exc:
         logger.exception("[Startup] Non-fatal startup error: %s", exc)
         try:
@@ -3137,8 +3137,8 @@ if __name__ == "__main__":
     if _import_errors:
         for mod, err in _import_errors.items():
             print(f"    [WARN] {mod}: {err}")
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.getenv("PORT", 8080))
     print(f"  Dashboard : http://localhost:{port}")
     print(f"  API Docs  : http://localhost:{port}/docs")
     print("=" * 60)
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)), log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8080)), log_level="info")
