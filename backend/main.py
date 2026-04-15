@@ -211,18 +211,43 @@ def _ensure_demo_mode(reason: str) -> None:
 # ---------------------------------------------------------------
 # Module Singletons
 # ---------------------------------------------------------------
-emergency_engine = EmergencyCorridorEngine() if EmergencyCorridorEngine else None
-carbon_engine = CarbonCreditEngine() if CarbonCreditEngine else None
-pedestrian_ai = PedestrianSafetyAI(device="cpu") if PedestrianSafetyAI else None  # CPU for backend
-security_detector = SignalAnomalyDetector() if SignalAnomalyDetector else None
-maintenance_ai = RoadMaintenanceAI() if RoadMaintenanceAI else None
-nl_parser = NLCommandParser() if NLCommandParser else None
-counterfactual = CounterfactualEngine() if CounterfactualEngine else None
-voice = VoiceBroadcast(language="en") if VoiceBroadcast else None
+emergency_engine = None
+carbon_engine = None
+pedestrian_ai = None
+security_detector = None
+maintenance_ai = None
+nl_parser = None
+counterfactual = None
+voice = None
 
-# Build the graph for emergency routing
-if emergency_engine:
-    emergency_engine.build_grid_graph(rows=4, cols=4)
+
+def _init_module_singletons() -> None:
+    """Initialize optional module singletons lazily during startup."""
+    global emergency_engine, carbon_engine, pedestrian_ai, security_detector
+    global maintenance_ai, nl_parser, counterfactual, voice
+
+    if DEMO_MODE:
+        emergency_engine = None
+        carbon_engine = None
+        pedestrian_ai = None
+        security_detector = None
+        maintenance_ai = None
+        nl_parser = None
+        counterfactual = None
+        voice = None
+        return
+
+    emergency_engine = EmergencyCorridorEngine() if EmergencyCorridorEngine else None
+    carbon_engine = CarbonCreditEngine() if CarbonCreditEngine else None
+    pedestrian_ai = PedestrianSafetyAI(device="cpu") if PedestrianSafetyAI else None
+    security_detector = SignalAnomalyDetector() if SignalAnomalyDetector else None
+    maintenance_ai = RoadMaintenanceAI() if RoadMaintenanceAI else None
+    nl_parser = NLCommandParser() if NLCommandParser else None
+    counterfactual = CounterfactualEngine() if CounterfactualEngine else None
+    voice = VoiceBroadcast(language="en") if VoiceBroadcast else None
+
+    if emergency_engine:
+        emergency_engine.build_grid_graph(rows=4, cols=4)
 
 # ---------------------------------------------------------------
 # Pydantic Models for POST Bodies
@@ -1718,9 +1743,6 @@ def _predict_rl_actions() -> Dict[str, int]:
         return {}
 
 
-_init_decision_engine()
-
-
 # ---------------------------------------------------------------
 # REST Endpoints — Core
 # ---------------------------------------------------------------
@@ -1733,6 +1755,11 @@ def root():
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/ping")
+def ping():
+    return {"message": "pong"}
 
 
 @app.get("/api/status")
@@ -3062,6 +3089,9 @@ async def _override_expiry_loop():
 @app.on_event("startup")
 async def startup():
     try:
+        _init_module_singletons()
+        _init_decision_engine()
+
         if (
             live_runtime.enabled
             and LIVE_MODE
@@ -3071,11 +3101,11 @@ async def startup():
             logger.error("[Startup] Live validation issue: %s", live_runtime.startup_validation_error)
             live_runtime._activate_demo_fallback(live_runtime.startup_validation_error)
 
-        # In Railway demo deployments, keep startup minimal and avoid optional background loops.
-        if not _IS_RAILWAY:
+        # Keep startup minimal in demo/cloud deployments.
+        if (not _IS_RAILWAY) and (not DEMO_MODE):
             asyncio.create_task(_override_expiry_loop())
         else:
-            logger.info("[Startup] Railway mode: skipping override expiry background loop")
+            logger.info("[Startup] Lightweight mode: skipping override expiry background loop")
 
         mode_label = "DEMO" if DEMO_MODE else "LIVE"
         logger.info("[Startup] Running in %s MODE", mode_label)
