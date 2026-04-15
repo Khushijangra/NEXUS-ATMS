@@ -54,8 +54,13 @@ from backend.demo_data import DemoDataGenerator
 # Detect Railway runtime early and force safe demo defaults in cloud.
 _IS_RAILWAY = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"))
 
-# Determine boot mode early so optional heavy modules can be skipped in cloud demo startup.
-_BOOT_DEMO_MODE = _IS_RAILWAY or (os.getenv("DEMO_MODE", "true").lower() == "true")
+# Determine boot mode early so optional heavy modules can be skipped in demo startup.
+# Explicit DEMO_MODE must always win, including on Railway.
+_demo_mode_env = os.getenv("DEMO_MODE")
+if _demo_mode_env is None:
+    _BOOT_DEMO_MODE = True
+else:
+    _BOOT_DEMO_MODE = _demo_mode_env.lower() == "true"
 
 # Module imports — guarded so backend still starts if a module fails
 _import_errors: Dict[str, str] = {}
