@@ -3061,7 +3061,11 @@ async def startup():
             logger.error("[Startup] Live validation issue: %s", live_runtime.startup_validation_error)
             live_runtime._activate_demo_fallback(live_runtime.startup_validation_error)
 
-        asyncio.create_task(_override_expiry_loop())
+        # In Railway demo deployments, keep startup minimal and avoid optional background loops.
+        if not _IS_RAILWAY:
+            asyncio.create_task(_override_expiry_loop())
+        else:
+            logger.info("[Startup] Railway mode: skipping override expiry background loop")
 
         mode_label = "DEMO" if DEMO_MODE else "LIVE"
         logger.info("[Startup] Running in %s MODE", mode_label)
