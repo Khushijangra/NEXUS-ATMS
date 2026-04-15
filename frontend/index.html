@@ -2270,14 +2270,20 @@
     }
 
     async function refreshFromRestFallback() {
-      const [rows, selected] = await Promise.all([
+      const [rows, selected, status, snap, emergencyActive, source] = await Promise.all([
         fetchJson('/api/intersections'),
         fetchJson('/api/junction/' + encodeURIComponent(selectedJunctionId()) + '/state').catch(() => ({})),
+        fetchJson('/api/status').catch(() => ({})),
+        fetchJson('/api/snapshot').catch(() => ({})),
+        fetchJson('/api/emergency/active').catch(() => ([])),
+        fetchJson('/api/live/source').catch(() => ({})),
       ]);
 
       const junctions = _normalizeJunctions(rows);
       const ids = Object.keys(junctions);
       const selectedId = (selected && selected.junction_id) || appState.selected_junction || ids[0] || 'J0_0';
+      const runtime = (status && status.runtime) ? status.runtime : {};
+      const isDemo = Boolean(status && status.demo_mode);
 
       let queueSum = 0;
       let waitSum = 0;
@@ -2286,24 +2292,40 @@
         waitSum += Number(junctions[jid].avg_wait || 0);
       }
 
+      const emergencyEvent = Array.isArray(emergencyActive) && emergencyActive.length ? emergencyActive[0] : null;
+      const emergencyState = emergencyEvent
+        ? {
+            active: true,
+            corridor: Array.isArray(emergencyEvent.path) ? emergencyEvent.path : [],
+            eta: Number(emergencyEvent.eta_seconds || 0),
+          }
+        : { active: false, corridor: [], eta: 0 };
+
+      cameraInputMode = String((source && source.mode) || cameraInputMode || 'live').toLowerCase();
+
+      const snapshotAvgWait = Number(snap.avg_waiting_time || 0);
+      const snapshotQueue = Number(snap.total_queue || 0);
+      const waitAvg = ids.length ? (waitSum / ids.length) : 0;
+
       appState = {
         frame_id: Number(appState.frame_id || 0) + 1,
         tick_timestamp: Date.now(),
         selected_junction: selectedId,
         junctions,
         session_metrics: {
-          queue_length: queueSum,
-          avg_wait_ai: ids.length ? (waitSum / ids.length) : 0,
+          queue_length: snapshotQueue > 0 ? snapshotQueue : queueSum,
+          avg_wait_ai: snapshotAvgWait > 0 ? snapshotAvgWait : waitAvg,
         },
         ai_decisions: Array.isArray(appState.ai_decisions) ? appState.ai_decisions : [],
-        emergency: appState.emergency || { active: false, corridor: [], eta: 0 },
+        emergency: emergencyState,
         health: {
-          system_mode: 'fallback',
-          fps: 0,
-          latency: { min: 0, avg: 0, max: 0 },
+          system_mode: isDemo ? 'demo-fallback' : 'rest-fallback',
+          fps: Number(runtime.fps || 0),
+          latency: runtime.latency_ms || { min: 0, avg: 0, max: 0 },
+          detection_count: Number(runtime.vehicle_markers || 0),
           pipeline_guard: { status: 'ok', message: 'REST fallback active' },
           decision_source: 'rest-fallback',
-          degraded_reason: '',
+          degraded_reason: runtime.system_health === 'degraded' ? 'runtime degraded' : '',
         },
       };
 
