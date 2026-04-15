@@ -1934,25 +1934,35 @@ async def live_upload_video(video: UploadFile = File(...), x_api_key: Optional[s
     try:
         with out_path.open("wb") as f:
             shutil.copyfileobj(video.file, f)
+
+        if _uploaded_video_path and os.path.isfile(_uploaded_video_path):
+            try:
+                os.remove(_uploaded_video_path)
+            except OSError:
+                pass
+
+        _uploaded_video_path = str(out_path)
+        _camera_input_mode = "upload"
+        _camera_source_updated_at = int(time.time() * 1000)
+        _invalidate_cam_renderers()
+
+        return {
+            "ok": True,
+            "message": "Video uploaded and camera source switched to upload mode",
+            **_camera_source_payload(),
+        }
+    except Exception as exc:
+        logger.exception("[Upload] Video upload failed: %s", exc)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "ok": False,
+                "message": "Upload failed, service remains running in safe mode.",
+                "error": str(exc),
+            },
+        )
     finally:
         await video.close()
-
-    if _uploaded_video_path and os.path.isfile(_uploaded_video_path):
-        try:
-            os.remove(_uploaded_video_path)
-        except OSError:
-            pass
-
-    _uploaded_video_path = str(out_path)
-    _camera_input_mode = "upload"
-    _camera_source_updated_at = int(time.time() * 1000)
-    _invalidate_cam_renderers()
-
-    return {
-        "ok": True,
-        "message": "Video uploaded and camera source switched to upload mode",
-        **_camera_source_payload(),
-    }
 
 
 @app.post("/api/live/upload-video/clear")
