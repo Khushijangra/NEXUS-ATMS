@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.utils.logger import setup_logger
+from ai.utils.logger import setup_logger
 
 
 def main():

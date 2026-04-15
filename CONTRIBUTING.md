@@ -14,7 +14,7 @@ pip install -r requirements.txt
 3. Start dashboard backend:
 
 ```bash
-python dashboard/backend/main.py
+python backend/main.py
 ```
 
 ## Branching
@@ -47,7 +47,7 @@ Before opening a PR, ensure:
 Recommended checks before PR:
 
 ```bash
-python -m compileall -q src control iot prediction vision modules dashboard scripts train.py evaluate.py run_demo.py run_digital_twin.py
+python -m compileall -q ai backend control iot modules scripts train.py evaluate.py run_demo.py run_digital_twin.py
 ```
 
 ## Reporting issues

@@ -7,12 +7,12 @@ import argparse
 import os
 import sys
 import subprocess
-import time
 from pathlib import Path
+from typing import List
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from src.utils.logger import setup_logger
+from ai.utils.logger import setup_logger
 
 
 def check_sumo() -> bool:
@@ -28,16 +28,16 @@ def check_sumo() -> bool:
         return False
 
 
-def run_cmd(cmd: str, log, description: str) -> bool:
+def run_cmd(cmd: List[str], log, description: str) -> bool:
     """Run a shell command, logging success/failure."""
     log.info(f"▶ {description}")
-    log.info(f"  $ {cmd}")
-    result = os.system(cmd)
-    if result == 0:
+    log.info("  $ %s", " ".join(cmd))
+    result = subprocess.run(cmd)
+    if result.returncode == 0:
         log.info(f"  ✓ {description} complete")
         return True
     else:
-        log.error(f"  ✗ {description} failed (exit {result})")
+        log.error(f"  ✗ {description} failed (exit {result.returncode})")
         return False
 
 
@@ -65,7 +65,9 @@ def main():
     if args.dashboard_only:
         log.info("Launching dashboard in demo mode (no SUMO required)...")
         os.environ["DEMO_MODE"] = "true"
-        run_cmd(f"{py} dashboard/backend/main.py", log, "Dashboard")
+        os.environ["LIVE_MODE"] = "false"
+        os.environ["FAIL_FAST_VIDEO"] = "false"
+        run_cmd([py, "backend/main.py"], log, "Dashboard")
         return
 
     # Full pipeline
@@ -74,7 +76,9 @@ def main():
         log.warning("SUMO not found. Launching dashboard in demo mode instead.")
         log.info("To run full pipeline, install SUMO and set SUMO_HOME.")
         os.environ["DEMO_MODE"] = "true"
-        run_cmd(f"{py} dashboard/backend/main.py", log, "Dashboard (demo)")
+        os.environ["LIVE_MODE"] = "false"
+        os.environ["FAIL_FAST_VIDEO"] = "false"
+        run_cmd([py, "backend/main.py"], log, "Dashboard (demo)")
         return
 
     log.info(f"SUMO detected ✓")
@@ -82,17 +86,19 @@ def main():
     log.info("")
 
     # Step 1: Generate scenarios
-    run_cmd(f"{py} scripts/generate_scenarios.py --scenario all", log, "Generate Scenarios")
+    run_cmd([py, "scripts/generate_scenarios.py", "--scenario", "all"], log, "Generate Scenarios")
 
     # Step 2: Train
     ok = run_cmd(
-        f"{py} train.py --agent {args.agent} --timesteps {args.timesteps} --demo",
+        [py, "train.py", "--agent", args.agent, "--timesteps", str(args.timesteps), "--demo"],
         log, "Training"
     )
     if not ok:
         log.error("Training failed. Launching dashboard in demo mode.")
         os.environ["DEMO_MODE"] = "true"
-        run_cmd(f"{py} dashboard/backend/main.py", log, "Dashboard (demo)")
+        os.environ["LIVE_MODE"] = "false"
+        os.environ["FAIL_FAST_VIDEO"] = "false"
+        run_cmd([py, "backend/main.py"], log, "Dashboard (demo)")
         return
 
     # Step 3: Find the latest model
@@ -121,12 +127,12 @@ def main():
 
     # Step 4: Evaluate
     run_cmd(
-        f"{py} evaluate.py --model {best_model} --agent {args.agent} --report",
+        [py, "evaluate.py", "--model", best_model, "--agent", args.agent, "--report"],
         log, "Evaluation"
     )
 
     # Step 5: Generate report
-    run_cmd(f"{py} scripts/generate_report.py", log, "Report Generation")
+    run_cmd([py, "scripts/generate_report.py"], log, "Report Generation")
 
     log.info("")
     log.info("=" * 60)
@@ -139,7 +145,9 @@ def main():
     if not args.skip_dashboard:
         log.info("Launching dashboard...")
         os.environ["DEMO_MODE"] = "true"
-        run_cmd(f"{py} dashboard/backend/main.py", log, "Dashboard")
+        os.environ["LIVE_MODE"] = "false"
+        os.environ["FAIL_FAST_VIDEO"] = "false"
+        run_cmd([py, "backend/main.py"], log, "Dashboard")
 
 
 if __name__ == "__main__":

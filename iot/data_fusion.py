@@ -145,8 +145,13 @@ class SensorFusion:
         ap = snap.approaches.setdefault(approach, ApproachState(approach))
         w = self.weights["vision"]
         ap.vehicle_count = self._smooth(ap.vehicle_count, count, w)
+        # Vision-first queue/occupancy approximation so live mode works without loop/radar sensors.
+        ap.queue_length = self._smooth(ap.queue_length, float(count), w)
+        ap.occupancy_pct = self._smooth(ap.occupancy_pct, min(100.0, float(count) * 7.5), w)
+        ap.flow_veh_h = self._smooth(ap.flow_veh_h, float(count) * 120.0, w)
         if speed_kmh > 0:
             ap.speed_kmh = self._smooth(ap.speed_kmh, speed_kmh, w)
+        ap.data_quality = max(ap.data_quality, 0.7)
         ap.timestamp = time.time()
 
     def snapshot(self, int_id: str) -> Optional[IntersectionSnapshot]:

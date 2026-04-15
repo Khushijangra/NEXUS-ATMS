@@ -16,26 +16,26 @@
 | # | Component | Status | Files | Lines | Explanation |
 |---|-----------|--------|-------|-------|-------------|
 | **CORE RL ENGINE** |||||
-| 1 | DQN Agent | ✅ | `src/agents/dqn_agent.py` | ~130 | Deep Q-Network using Stable-Baselines3. Trains, evaluates, saves/loads. GPU with CPU fallback. |
-| 2 | PPO Agent | ✅ | `src/agents/ppo_agent.py` | ~120 | Proximal Policy Optimization. Same interface as DQN. Parallel env support (SubprocVecEnv). |
+| 1 | DQN Agent | ✅ | `ai/rl/dqn.py` | ~130 | Deep Q-Network using Stable-Baselines3. Trains, evaluates, saves/loads. GPU with CPU fallback. |
+| 2 | PPO Agent | ✅ | `ai/rl/ppo.py` | ~120 | Proximal Policy Optimization. Same interface as DQN. Parallel env support (SubprocVecEnv). |
 | 3 | Multi-Agent RL Controller | ✅ | `control/rl_controller.py` | ~270 | Per-intersection PPO agent with federated coordinator. Webster heuristic fallback. Checkpoint auto-load. |
 | 4 | Green-Wave Optimizer | ✅ | `control/signal_optimizer.py` | ~85 | Progressive signal offsets for arterial corridors. Seeds RL with good initial timing. |
 | 5 | Emergency Handler | ✅ | `control/emergency_handler.py` | ~55 | Overrides RL actions during emergency corridor activation. Stateless per-call preemption. |
 | **ENVIRONMENTS** |||||
-| 6 | Single-Intersection SUMO Env | ⚠️ | `src/envs/sumo_env.py` | ~400 | Gymnasium env: 13-dim state, Discrete(2) action. Requires SUMO + TraCI installed. |
-| 7 | Multi-Agent 4×4 Grid SUMO Env | ⚠️ | `src/envs/multi_agent_env.py` | ~400 | 16 independent agents, 21 features each (336 total). Cooperative reward. Requires SUMO. |
+| 6 | Single-Intersection SUMO Env | ⚠️ | `ai/envs/sumo_env.py` | ~400 | Gymnasium env: 13-dim state, Discrete(2) action. Requires SUMO + TraCI installed. |
+| 7 | Multi-Agent 4×4 Grid SUMO Env | ⚠️ | `ai/envs/multi_agent_env.py` | ~400 | 16 independent agents, 21 features each (336 total). Cooperative reward. Requires SUMO. |
 | 8 | Standalone Traffic Env (No SUMO) | ✅ | `control/traffic_env.py` | ~300 | Queueing-theory physics: Poisson arrivals, NEMA 4-phase, 26-dim state. Works without any external simulator. |
 | **AI / ML MODELS** |||||
-| 9 | LSTM Traffic Predictor | ✅ | `prediction/lstm_predictor.py` | ~370 | Seq2Seq bidirectional encoder-decoder. Trained: **R² = 0.61, MAE = 0.075**. Forecasts 30 min ahead. |
-| 10 | Statistical Anomaly Detector | ✅ | `prediction/anomaly_detector.py` | ~145 | Z-score + IQR + rate-of-change ensemble. Lightweight, no ML needed. |
-| 11 | ML Anomaly Detector | ✅ | `prediction/ml_anomaly_detector.py` | ~470 | IsolationForest + Autoencoder + Z-score. Trained: **F1 = 0.913, Recall = 1.0**. |
-| 12 | Explainable AI (XAI) | ✅ | `src/explainability/explainer.py` | ~430 | Permutation importance, SHAP (KernelSHAP), gradient saliency. Human-readable decision explanations. |
+| 9 | LSTM Traffic Predictor | ✅ | `ai/prediction/lstm_predictor.py` | ~370 | Seq2Seq bidirectional encoder-decoder. Trained: **R² = 0.61, MAE = 0.075**. Forecasts 30 min ahead. |
+| 10 | Statistical Anomaly Detector | ✅ | `ai/anomaly/anomaly_detector.py` | ~145 | Z-score + IQR + rate-of-change ensemble. Lightweight, no ML needed. |
+| 11 | ML Anomaly Detector | ✅ | `ai/anomaly/ml_anomaly_detector.py` | ~470 | IsolationForest + Autoencoder + Z-score. Trained: **F1 = 0.913, Recall = 1.0**. |
+| 12 | Explainable AI (XAI) | ✅ | `ai/explainability/explainer.py` | ~430 | Permutation importance, SHAP (KernelSHAP), gradient saliency. Human-readable decision explanations. |
 | **COMPUTER VISION** |||||
-| 13 | Vehicle Detector | ✅ | `vision/detector.py` | ~200 | 3-tier fallback: YOLOv8 → OpenCV MobileNet-SSD → synthetic. Detects car/bus/truck/bike. |
-| 14 | Vehicle Tracker | ✅ | `vision/tracker.py` | ~165 | Greedy IoU-based SORT. Assigns persistent track IDs across frames. |
-| 15 | Zone Counter | ✅ | `vision/counter.py` | ~165 | Polygon-based queue counting + line-cross throughput. Per-approach breakdown (N/S/E/W). |
-| 16 | Speed Estimator | ✅ | `vision/speed_estimator.py` | ~120 | Frame-to-frame centroid displacement → km/h. Perspective calibration. |
-| 17 | Incident Detector | ✅ | `vision/incident_detector.py` | ~185 | Detects accidents/breakdowns from trajectory anomalies (sudden stops, wrong-way, clustering). |
+| 13 | Vehicle Detector | ✅ | `ai/vision/detector.py` | ~200 | 3-tier fallback: YOLOv8 → OpenCV MobileNet-SSD → synthetic. Detects car/bus/truck/bike. |
+| 14 | Vehicle Tracker | ✅ | `ai/vision/tracker.py` | ~165 | Greedy IoU-based SORT. Assigns persistent track IDs across frames. |
+| 15 | Zone Counter | ✅ | `ai/vision/counter.py` | ~165 | Polygon-based queue counting + line-cross throughput. Per-approach breakdown (N/S/E/W). |
+| 16 | Speed Estimator | ✅ | `ai/vision/speed_estimator.py` | ~120 | Frame-to-frame centroid displacement → km/h. Perspective calibration. |
+| 17 | Incident Detector | ✅ | `ai/vision/incident_detector.py` | ~185 | Detects accidents/breakdowns from trajectory anomalies (sudden stops, wrong-way, clustering). |
 | **IoT & SENSOR LAYER** |||||
 | 18 | Sensor Simulator | ✅ | `iot/sensor_simulator.py` | ~270 | Generates loop-detector, radar, environmental, pedestrian, emergency data. Time-of-day patterns. |
 | 19 | MQTT Client | ✅ | `iot/mqtt_client.py` | ~140 | Paho-MQTT v5 with TLS. Falls back to in-process pub/sub bus when no broker available. |
@@ -50,9 +50,9 @@
 | 27 | Counterfactual Engine | ✅ | `modules/counterfactual/engine.py` | ~150 | Shadow baseline (Webster fixed-timing) runs in parallel to prove AI improvement. ROI calculation. |
 | 28 | Voice Broadcast | ✅ | `modules/voice_broadcast/broadcast.py` | ~130 | Google TTS in 10 languages (EN, HI, TA, TE, KN, MR, BN, GU, ML, PA). Audio caching + pygame playback. |
 | **DASHBOARD & API** |||||
-| 29 | FastAPI Backend | ✅ | `dashboard/backend/main.py` | ~900 | 40+ REST endpoints + WebSocket (1 Hz live data). Integrates all 8 specialty modules. Safe-import guards. |
-| 30 | Web Dashboard (Frontend) | ✅ | `dashboard/frontend/index.html` | 1296 | 4 tabs: Authority Dashboard, Citizen Portal, AI Analytics, System Architecture. Canvas digital twin, Chart.js, WebSocket. |
-| 31 | Demo Data Generator | ✅ | `dashboard/demo_data.py` | ~120 | Realistic synthetic traffic data when SUMO is unavailable. Time-of-day demand curves. |
+| 29 | FastAPI Backend | ✅ | `backend/main.py` | ~900 | 40+ REST endpoints + WebSocket (1 Hz live data). Integrates all 8 specialty modules. Safe-import guards. |
+| 30 | Web Dashboard (Frontend) | ✅ | `frontend/index.html` | 1296 | 4 tabs: Authority Dashboard, Citizen Portal, AI Analytics, System Architecture. Canvas digital twin, Chart.js, WebSocket. |
+| 31 | Demo Data Generator | ✅ | `backend/demo_data.py` | ~120 | Realistic synthetic traffic data when SUMO is unavailable. Time-of-day demand curves. |
 | 32 | Pygame Digital Twin | ✅ | `run_digital_twin.py` + `modules/digital_twin/twin.py` | ~400 | 2D city visualization: animated vehicles, signal states, emergency corridors, congestion heat map. |
 | **TRAINING & EVALUATION PIPELINE** |||||
 | 33 | RL Training Script | ⚠️ | `train.py` | ~135 | End-to-end: load config → create env → train agent → save model. Requires SUMO for SUMO envs. |
@@ -79,9 +79,9 @@
 | 50 | Benchmark Results Doc | ✅ | `docs/benchmarks.md` | ~100 | Actual eval results: wait ↓98%, queue ↓91%, LSTM R²=0.61, anomaly F1=0.91. |
 | 51 | README | ✅ | `README.md` | — | Project overview, setup instructions, feature list. |
 | **UTILITIES** |||||
-| 52 | Structured Logger | ✅ | `src/utils/logger.py` | ~80 | ANSI-colored console + timestamped file logging. |
-| 53 | Metrics Tracker | ✅ | `src/utils/metrics.py` | ~100 | Episode/step recording, summaries (mean/std/min/max), learning curves, JSON export. |
-| 54 | Visualization Utils | ✅ | `src/utils/visualization.py` | ~120 | Learning curves + comparison bar charts. Matplotlib with Agg backend. |
+| 52 | Structured Logger | ✅ | `ai/utils/logger.py` | ~80 | ANSI-colored console + timestamped file logging. |
+| 53 | Metrics Tracker | ✅ | `ai/utils/metrics.py` | ~100 | Episode/step recording, summaries (mean/std/min/max), learning curves, JSON export. |
+| 54 | Visualization Utils | ✅ | `ai/utils/visualization.py` | ~120 | Learning curves + comparison bar charts. Matplotlib with Agg backend. |
 | 55 | GPU Diagnostic | ✅ | `scripts/check_gpu.py` | ~30 | Reports CUDA availability, device name, VRAM. |
 | 56 | SUMO Connection Test | ✅ | `scripts/test_sumo_connection.py` | ~100 | 7-point diagnostic: SUMO_HOME → binary → TraCI → network → live simulation. |
 
@@ -203,14 +203,13 @@ These 6 items need the SUMO traffic simulator installed (freely available from [
 | Directory | Python Files | Other Files | Total |
 |-----------|-------------|-------------|-------|
 | Top-level | 4 | 4 (md, txt, bat) | 8 |
-| `src/` | 10 | — | 10 |
-| `prediction/` | 4 | — | 4 |
-| `vision/` | 6 | — | 6 |
+| `ai/` | 20+ | — | 20+ |
 | `iot/` | 4 | — | 4 |
 | `control/` | 5 | — | 5 |
 | `modules/` | 10 | — | 10 |
 | `scripts/` | 10 | — | 10 |
-| `dashboard/` | 2 | 1 (html) | 3 |
+| `backend/` | 3+ | — | 3+ |
+| `frontend/` | 1 | 1 (html) | 2 |
 | `configs/` | — | 4 (yaml) | 4 |
 | `networks/` | — | 12 (xml) + 1 (bat) | 13 |
 | `docs/` | — | 3 (md) | 3 |

@@ -1,110 +1,146 @@
-# NEXUS-ATMS
+﻿# NEXUS-ATMS
 
-AI-driven urban traffic management prototype with reinforcement learning, prediction, anomaly detection, digital twin visualization, and a FastAPI dashboard.
+AI-Driven Urban Congestion Management and Adaptive Traffic Signal Control.
 
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://python.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![CI](https://github.com/Khushijangra/NEXUS-ATMS/actions/workflows/ci.yml/badge.svg)](https://github.com/Khushijangra/NEXUS-ATMS/actions/workflows/ci.yml)
+NEXUS-ATMS is a modular traffic intelligence platform that combines reinforcement learning, computer vision, forecasting, anomaly detection, and operational APIs to reduce congestion and improve city-scale traffic decisions.
 
-## What This Repository Currently Provides
+## Problem
 
-- RL agents (DQN/PPO) and traffic environments (SUMO + standalone synthetic environment)
-- Prediction stack: LSTM forecasting and anomaly detection
-- Specialty modules: emergency corridor, carbon engine, pedestrian safety, cybersecurity, road maintenance, NL commands, voice broadcast, counterfactual engine
-- FastAPI backend with REST + WebSocket endpoints
-- Web dashboard and digital twin renderer
+Urban traffic is dynamic, non-stationary, and multi-objective. Fixed-time signals cannot react to:
 
-## Runtime Modes (Important)
+- sudden queue spikes
+- emergency vehicle priority requirements
+- changing demand patterns across junctions
+- incident-related instability
 
-This repository supports two practical operating modes today:
+## Solution
 
-1. Dashboard demo mode
-- Works without SUMO
-- Streams simulated but realistic traffic snapshots
-- Best for presentations and module demonstrations
+NEXUS-ATMS provides a unified stack that:
 
-2. Simulation/training mode
-- Uses SUMO where required by training/evaluation scripts
-- Produces model checkpoints and benchmark artifacts
+- senses traffic through CV and IoT-like streams
+- predicts short-horizon flow with sequence models
+- detects anomalies with statistical + ML methods
+- optimizes signal behavior with RL agents
+- exposes real-time controls and analytics through FastAPI and dashboard UI
 
-Note: Real-world deployment wiring (live camera feeds, physical controllers, production sensor brokers) is not fully integrated end-to-end yet.
+## Architecture
 
-## Quick Start
+### Core Layers
 
-### Prerequisites
+1. Ingestion: camera frames, synthetic/live runtime streams, sensor fusion
+2. AI Engine: RL control, prediction, anomaly detection, explainability
+3. Control + Safety: emergency corridor, security validation, maintenance logic
+4. Service Layer: FastAPI REST + WebSocket endpoints
+5. Presentation: frontend dashboard and reports
 
-- Python 3.10+
-- (Optional but recommended) SUMO 1.18+ for simulation scripts
-- Windows PowerShell or compatible shell
+### Final Module Layout
 
-### Install
+- backend: API runtime, app entrypoint, backend services
+- ai/rl: DQN, PPO, D3QN, graph coordination
+- ai/envs: SUMO single-intersection and multi-agent environments
+- ai/vision: detector, tracker, counter, renderer, geo-mapper, incidents
+- ai/prediction: LSTM forecasting
+- ai/anomaly: rule-based and ML anomaly detection
+- ai/explainability: XAI analysis pipeline
+- ai/utils: metrics, logging, training visualization helpers
+- control: traffic control orchestration and signal optimization logic
+- iot: simulator, MQTT abstraction, fusion logic
+- frontend: dashboard assets
+- scripts: benchmarking, validation, report generation, demo tooling
+- config, configs: runtime and scenario configuration
+- docs: architecture, benchmarks, migration and implementation notes
+
+## Data Flow
+
+Input -> CV/IoT ingest -> Feature state assembly -> AI inference/control -> Backend API/WebSocket -> Dashboard + reports
+
+Detailed path:
+
+1. camera/simulated stream enters ai.vision and iot modules
+2. fused state + metrics are built per junction
+3. ai.rl policy and ai.prediction forecasts are computed
+4. ai.anomaly + safety modules flag incidents and risks
+5. backend.main publishes REST responses and live WS updates
+6. frontend renders operator view and AI analytics
+
+## Setup
+
+### 1) Create environment
 
 ```bash
+python -m venv .venv
+.venv\\Scripts\\activate
 pip install -r requirements.txt
 ```
 
-### Run Dashboard (Fastest)
+### 2) Optional deployment runtime deps
 
 ```bash
-python run_demo.py --dashboard-only
+pip install -r requirements-deploy.txt
 ```
 
-Then open:
-
-- http://127.0.0.1:8000 (or the port printed by the backend)
-
-### Train / Evaluate
+### 3) Verify GPU/stack (optional)
 
 ```bash
-python train.py --agent dqn --timesteps 50000 --demo
-python evaluate.py --model models/<run>/best/best_model.zip --agent dqn --report
+python scripts/check_gpu.py
 ```
 
-## Repository Layout
+## Run
 
-```text
-.
-├── dashboard/
-│   ├── backend/main.py
-│   ├── frontend/index.html
-│   └── demo_data.py
-├── control/
-├── iot/
-├── prediction/
-├── vision/
-├── modules/
-├── src/
-├── networks/
-├── configs/
-├── scripts/
-├── docs/
-├── train.py
-├── evaluate.py
-├── run_demo.py
-└── run_digital_twin.py
+### Backend (recommended)
+
+```bash
+python backend/main.py
 ```
 
-## Documentation
+### Full demo helper
 
-- Architecture overview: [docs/architecture.md](docs/architecture.md)
-- Benchmarks and model metrics: [docs/benchmarks.md](docs/benchmarks.md)
-- Implementation audit checklist: [docs/implementation_checklist.md](docs/implementation_checklist.md)
+```bash
+python run_demo.py
+```
 
-## Governance and Community
+### Realtime stack helper
 
-- Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
-- Security policy: [SECURITY.md](SECURITY.md)
-- Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-- Pull request template: [.github/pull_request_template.md](.github/pull_request_template.md)
+```bash
+python scripts/start_realtime_stack.py --backend yolo --device cpu
+```
 
-## Roadmap (Near-Term)
+## Training and Evaluation
 
-- Wire real camera/SUMO frame ingestion to vision pipeline in live backend loop
-- Wire MQTT broker-backed sensor ingestion for IoT fusion
-- Move historical analytics to persistent storage
-- Add authenticated production control surface for authority endpoints
+```bash
+python train.py --agent d3qn --timesteps 50000
+python evaluate.py --agent d3qn --model models/<run>/best/best_model.pt
+```
+
+Benchmark suite:
+
+```bash
+python scripts/benchmark_d3qn_suite.py --config configs/default.yaml --timesteps 50000
+```
+
+## Dashboard and API
+
+- Dashboard: http://localhost:8000
+- API docs: http://localhost:8000/docs
+- Live socket: /ws/live
+
+## Key Features
+
+- RL signal optimization (DQN, PPO, custom D3QN)
+- graph-based multi-junction coordination support
+- CV vehicle detection with robust fallback modes
+- LSTM-based traffic forecasting
+- statistical + ML anomaly detection
+- emergency corridor support for priority vehicles
+- explainability endpoint support for policy decisions
+- report generation and benchmark gating scripts
+
+## Repository Notes
+
+- Legacy hybrid folders were removed; this repository now uses the final module layout.
+- Backend single source of truth is backend/main.py.
+- AI single source of truth is under ai/.
 
 ## License
 
-Released under the MIT License.
-See [LICENSE](LICENSE).
+This project is intended for academic/research demonstration and engineering showcase use.

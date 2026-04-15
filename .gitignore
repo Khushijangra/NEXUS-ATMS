@@ -38,6 +38,8 @@ models/
 results/
 reports/
 audio_cache/
+docs/video_frames/
+nexus_dashboard/
 
 # Large model/data artifacts
 yolov8n.pt
@@ -61,3 +63,5 @@ coverage/
 *.log
 *.tmp
 *.bak
+*.orig
+*.rej
