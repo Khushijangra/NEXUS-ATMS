@@ -1522,6 +1522,8 @@
     let currentCameraJunction = '';
     const anomalyTimeline = [];
     const timelineLimit = 60;
+    let wsRetryTimer = null;
+    let fallbackPollTimer = null;
 
     function fmtNum(v, d = 1) {
       const n = Number(v || 0);
@@ -2249,11 +2251,91 @@
       });
     }
 
+    function _normalizeJunctions(rows) {
+      const out = {};
+      for (const row of (Array.isArray(rows) ? rows : [])) {
+        const jid = String(row.junction_id || row.id || '').trim();
+        if (!jid) continue;
+        const queue = Number(row.queue_length || 0);
+        const wait = Number(row.avg_waiting_time || row.wait_time || 0);
+        out[jid] = {
+          ...row,
+          congestion: String(row.congestion_level || row.congestion || 'normal').toLowerCase(),
+          queue_length: Number.isFinite(queue) ? queue : 0,
+          avg_wait: Number.isFinite(wait) ? wait : 0,
+          waiting_time: Number.isFinite(wait) ? wait : 0,
+        };
+      }
+      return out;
+    }
+
+    async function refreshFromRestFallback() {
+      const [rows, selected] = await Promise.all([
+        fetchJson('/api/intersections'),
+        fetchJson('/api/junction/' + encodeURIComponent(selectedJunctionId()) + '/state').catch(() => ({})),
+      ]);
+
+      const junctions = _normalizeJunctions(rows);
+      const ids = Object.keys(junctions);
+      const selectedId = (selected && selected.junction_id) || appState.selected_junction || ids[0] || 'J0_0';
+
+      let queueSum = 0;
+      let waitSum = 0;
+      for (const jid of ids) {
+        queueSum += Number(junctions[jid].queue_length || 0);
+        waitSum += Number(junctions[jid].avg_wait || 0);
+      }
+
+      appState = {
+        frame_id: Number(appState.frame_id || 0) + 1,
+        tick_timestamp: Date.now(),
+        selected_junction: selectedId,
+        junctions,
+        session_metrics: {
+          queue_length: queueSum,
+          avg_wait_ai: ids.length ? (waitSum / ids.length) : 0,
+        },
+        ai_decisions: Array.isArray(appState.ai_decisions) ? appState.ai_decisions : [],
+        emergency: appState.emergency || { active: false, corridor: [], eta: 0 },
+        health: {
+          system_mode: 'fallback',
+          fps: 0,
+          latency: { min: 0, avg: 0, max: 0 },
+          pipeline_guard: { status: 'ok', message: 'REST fallback active' },
+          decision_source: 'rest-fallback',
+          degraded_reason: '',
+        },
+      };
+
+      lastTickTimestampMs = Number(appState.tick_timestamp || Date.now());
+      renderAll(lastTickTimestampMs / 1000.0);
+      updateSyncIndicator();
+    }
+
+    function startRestFallback() {
+      if (fallbackPollTimer) return;
+      const wsStatus = document.getElementById('wsStatus');
+      wsStatus.textContent = 'WS: unavailable (REST fallback)';
+      wsStatus.classList.remove('sync-good');
+      wsStatus.classList.add('sync-warn');
+      refreshFromRestFallback().catch(() => {});
+      fallbackPollTimer = setInterval(() => {
+        refreshFromRestFallback().catch(() => {});
+      }, 1200);
+    }
+
+    function stopRestFallback() {
+      if (!fallbackPollTimer) return;
+      clearInterval(fallbackPollTimer);
+      fallbackPollTimer = null;
+    }
+
     function connectWS() {
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
       const ws = new WebSocket(proto + '://' + location.host + '/ws/live');
 
       ws.onopen = () => {
+        stopRestFallback();
         document.getElementById('wsStatus').textContent = 'WS: connected';
       };
 
@@ -2271,7 +2353,9 @@
 
       ws.onclose = () => {
         document.getElementById('wsStatus').textContent = 'WS: reconnecting';
-        setTimeout(connectWS, 900);
+        startRestFallback();
+        if (wsRetryTimer) clearTimeout(wsRetryTimer);
+        wsRetryTimer = setTimeout(connectWS, 900);
       };
 
       ws.onerror = () => ws.close();
