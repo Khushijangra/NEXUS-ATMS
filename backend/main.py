@@ -51,12 +51,19 @@ sys.path.insert(0, PROJECT_ROOT)
 
 from backend.demo_data import DemoDataGenerator
 
+# Determine boot mode early so optional heavy modules can be skipped in cloud demo startup.
+_BOOT_DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
+
 # Module imports — guarded so backend still starts if a module fails
 _import_errors: Dict[str, str] = {}
 
 
 def _safe_import(module_path: str, class_name: str):
     """Import a class, returning None on failure."""
+    if _BOOT_DEMO_MODE and module_path.startswith(("ai.", "modules.", "control.", "iot.")):
+        if module_path.startswith("modules."):
+            _import_errors[module_path] = "skipped in demo mode"
+        return None
     try:
         mod = __import__(module_path, fromlist=[class_name])
         return getattr(mod, class_name)
@@ -123,21 +130,47 @@ def _model_to_dict(model: BaseModel) -> Dict[str, Any]:
         return model.model_dump()
     return model.dict()
 
+
+def _optional_cv2():
+    try:
+        import cv2  # type: ignore
+        return cv2
+    except Exception:
+        return None
+
+
+def _optional_torch():
+    try:
+        import torch  # type: ignore
+        return torch
+    except Exception:
+        return None
+
 # ---------------------------------------------------------------
 # App Initialisation
 # ---------------------------------------------------------------
 app = FastAPI(title="NEXUS-ATMS Dashboard", version="2.0.0")
 HARDENED_MODE = os.getenv("HARDENED_MODE", "false").lower() == "true"
 CONTROL_API_KEY = os.getenv("CONTROL_API_KEY", "").strip()
-_cors_origins_raw = os.getenv(
-    "ALLOWED_ORIGINS",
-    "http://127.0.0.1:8000,http://localhost:8000,http://127.0.0.1:3000,http://localhost:3000",
+_default_allowed_origins = [
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3000",
+]
+_cors_origins_raw = os.getenv("ALLOWED_ORIGINS", "").strip()
+_frontend_origin = os.getenv("FRONTEND_ORIGIN", "").strip()
+_allowed_origins = list(
+    dict.fromkeys(
+        _default_allowed_origins
+        + [o.strip() for o in _cors_origins_raw.split(",") if o.strip()]
+        + ([_frontend_origin] if _frontend_origin else [])
+    )
 )
-_allowed_origins = [o.strip() for o in _cors_origins_raw.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_allowed_origins if HARDENED_MODE else ["*"],
+    allow_origins=_allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -158,9 +191,19 @@ if os.path.isdir(FRONTEND_DIR):
     app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 # Demo mode flag
-DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
-LIVE_MODE = os.getenv("LIVE_MODE", "true").lower() == "true"
+DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
+LIVE_MODE = os.getenv("LIVE_MODE", "false").lower() == "true"
 demo_gen = DemoDataGenerator(mode="rl") if DEMO_MODE else None
+
+
+def _ensure_demo_mode(reason: str) -> None:
+    """Switch runtime to demo mode without interrupting server startup."""
+    global DEMO_MODE, LIVE_MODE, demo_gen
+    DEMO_MODE = True
+    LIVE_MODE = False
+    if demo_gen is None:
+        demo_gen = DemoDataGenerator(mode="rl")
+    logger.warning("[Startup] Camera unavailable -> fallback to DEMO MODE (%s)", reason)
 
 # ---------------------------------------------------------------
 # Module Singletons
@@ -813,7 +856,7 @@ class LiveRuntime:
     """Connect vision, IoT, prediction, anomaly, and RL into one live tick."""
 
     def __init__(self) -> None:
-        self.enabled = LIVE_MODE
+        self.enabled = LIVE_MODE and not DEMO_MODE
         self.real_data_only = os.getenv("REAL_DATA_ONLY", "true").lower() == "true"
         self.mode = os.getenv("RUN_MODE", "real").strip().lower()
         if self.mode not in ("real", "demo"):
@@ -830,6 +873,7 @@ class LiveRuntime:
         if fail_fast_env is None:
             fail_fast_env = os.getenv("FAIL_ON_MISSING_VIDEO", "true")
         self.fail_fast_video = str(fail_fast_env).lower() not in {"0", "false", "no", "off"}
+        self.video_init_retries = max(1, int(os.getenv("VIDEO_INIT_RETRIES", "5")))
         self.black_frame_mean_threshold = float(os.getenv("BLACK_FRAME_MEAN_THRESHOLD", "5.0"))
         self.health = "healthy"
         self._lock = asyncio.Lock()
@@ -862,6 +906,8 @@ class LiveRuntime:
         self._last_open_attempt = 0.0
         self._is_file_source = False
         self.startup_validation_error: str = ""
+        self.fallback_triggered = False
+        self.fallback_reason = ""
         self.latest_markers: List[Dict] = []
         self.latest_heatmap: List[List[float]] = []
         self.latest_roads: List[Dict] = []
@@ -1147,9 +1193,10 @@ class LiveRuntime:
 
     @staticmethod
     def _encode_jpeg(frame) -> Optional[bytes]:
+        cv2 = _optional_cv2()
+        if cv2 is None:
+            return None
         try:
-            import cv2  # type: ignore
-
             ok, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
             if not ok:
                 return None
@@ -1157,57 +1204,117 @@ class LiveRuntime:
         except Exception:
             return None
 
+    def _activate_demo_fallback(self, reason: str) -> None:
+        """Disable live runtime and switch to demo mode after repeated camera failures."""
+        self.fallback_triggered = True
+        self.fallback_reason = reason
+        self.enabled = False
+        self.health = "degraded"
+        self.last_error = reason
+        _ensure_demo_mode(reason)
+
     def _open_video_source(self) -> None:
         self._last_open_attempt = time.time()
         self.reconnect_attempts += 1
+        self.startup_validation_error = ""
         try:
-            import cv2  # type: ignore
+            cv2 = _optional_cv2()
+            if cv2 is None:
+                self.startup_validation_error = "OpenCV unavailable"
+                self._activate_demo_fallback(self.startup_validation_error)
+                return
 
             source = int(self.video_source) if str(self.video_source).isdigit() else self.video_source
             self._is_file_source = isinstance(source, str) and os.path.isfile(source)
-            cap = cv2.VideoCapture(source)
-            if cap and cap.isOpened():
-                self.cap = cap
+
+            last_error = "Video source unavailable"
+            for attempt in range(1, self.video_init_retries + 1):
+                cap = cv2.VideoCapture(source)
+                if not (cap and cap.isOpened()):
+                    last_error = "Video source unavailable"
+                    logger.warning(
+                        "[LiveRuntime] Video source unavailable on attempt %d/%d: %s",
+                        attempt,
+                        self.video_init_retries,
+                        self.video_source,
+                    )
+                    if cap:
+                        cap.release()
+                    continue
+
                 ok, first = cap.read()
                 if not ok or first is None:
-                    self.frame_ok = False
-                    self.startup_validation_error = "Video source opened but first frame is invalid"
-                    _log_event("video", "first_frame_invalid", source=self.video_source)
-                else:
-                    first = self._resize_frame(first)
-                    frame_mean = float(np.mean(first))
+                    last_error = "Video source opened but first frame is invalid"
+                    _log_event("video", "first_frame_invalid", source=self.video_source, attempt=attempt)
+                    logger.warning(
+                        "[LiveRuntime] First frame invalid on attempt %d/%d",
+                        attempt,
+                        self.video_init_retries,
+                    )
+                    cap.release()
+                    continue
+
+                first = self._resize_frame(first)
+                frame_mean = float(np.mean(first))
+                _log_event(
+                    "video",
+                    "first_frame",
+                    source=self.video_source,
+                    shape=list(first.shape),
+                    mean_pixel=round(frame_mean, 2),
+                    attempt=attempt,
+                )
+
+                if frame_mean <= self.black_frame_mean_threshold:
+                    last_error = f"First frame appears black (mean={frame_mean:.2f})"
                     _log_event(
                         "video",
-                        "first_frame",
+                        "first_frame_black",
                         source=self.video_source,
-                        shape=list(first.shape),
-                        mean_pixel=round(frame_mean, 2),
+                        mean=round(frame_mean, 2),
+                        attempt=attempt,
                     )
-                    if frame_mean <= self.black_frame_mean_threshold:
-                        self.frame_ok = False
-                        self.startup_validation_error = (
-                            f"First frame appears black (mean={frame_mean:.2f})"
-                        )
-                        _log_event("video", "first_frame_black", source=self.video_source, mean=round(frame_mean, 2))
-                    else:
-                        self.frame_ok = True
-                        # Rewind for file sources so playback starts from first frame.
-                        if self._is_file_source:
-                            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                        logger.info("[LiveRuntime] Video source connected: %s", self.video_source)
-            else:
+                    logger.warning(
+                        "[LiveRuntime] Black first frame on attempt %d/%d (mean=%.2f)",
+                        attempt,
+                        self.video_init_retries,
+                        frame_mean,
+                    )
+                    cap.release()
+                    continue
+
                 self.cap = cap
-                self.frame_ok = False
-                logger.warning("[LiveRuntime] Video source unavailable: %s", self.video_source)
+                self.frame_ok = True
+                if self._is_file_source:
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                logger.info("[LiveRuntime] Video source connected: %s", self.video_source)
+                return
+
+            self.cap = None
+            self.frame_ok = False
+            self.startup_validation_error = last_error
+            logger.error("[LiveRuntime] Camera init failed after %d attempts: %s", self.video_init_retries, last_error)
+
+            # Always prefer fallback over startup failure.
+            self._activate_demo_fallback(last_error)
+            if self.fail_fast_video:
+                logger.error("[LiveRuntime] FAIL_FAST_VIDEO=true is set, but fallback is enforced to keep server up.")
+
         except Exception as exc:
             self.last_error = f"video init: {exc}"
             self.frame_ok = False
+            self.startup_validation_error = self.last_error
+            logger.exception("[LiveRuntime] Video init exception")
+            self._activate_demo_fallback(self.last_error)
 
     def _recover_stream_end(self) -> None:
         if not self.cap:
             return
         try:
-            import cv2  # type: ignore
+            cv2 = _optional_cv2()
+            if cv2 is None:
+                self._activate_demo_fallback("OpenCV unavailable")
+                return
 
             if self._is_file_source:
                 self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
@@ -1223,7 +1330,9 @@ class LiveRuntime:
 
     def _resize_frame(self, frame):
         try:
-            import cv2  # type: ignore
+            cv2 = _optional_cv2()
+            if cv2 is None:
+                return frame
 
             return cv2.resize(frame, (self.resize_width, self.resize_height))
         except Exception:
@@ -1612,12 +1721,15 @@ _init_decision_engine()
 # ---------------------------------------------------------------
 # REST Endpoints — Core
 # ---------------------------------------------------------------
-@app.get("/", response_class=HTMLResponse)
-async def root():
-    index_path = os.path.join(FRONTEND_DIR, "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return HTMLResponse("<h1>NEXUS-ATMS Dashboard</h1><p>Frontend not found.</p>")
+@app.get("/")
+def root():
+    return {"status": "NEXUS ATMS running"}
+
+
+@app.get("/health")
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}
 
 
 @app.get("/api/status")
@@ -1923,8 +2035,10 @@ def _junction_state_payload(junction_id: str) -> Dict:
 
 
 def _encode_jpeg_frame(frame) -> Optional[bytes]:
+    cv2 = _optional_cv2()
+    if cv2 is None:
+        return None
     try:
-        import cv2  # type: ignore
         ok, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 82])
         return buf.tobytes() if ok else None
     except Exception:
@@ -1932,8 +2046,10 @@ def _encode_jpeg_frame(frame) -> Optional[bytes]:
 
 
 def _demo_placeholder_jpeg(text: str = "Demo feed", junction: str = "J0_0") -> Optional[bytes]:
+    cv2 = _optional_cv2()
+    if cv2 is None:
+        return None
     try:
-        import cv2  # type: ignore
         frame = np.full((480, 800, 3), (245, 248, 250), dtype=np.uint8)
         accent_seed = sum(ord(ch) for ch in junction)
         accent = ((accent_seed * 37) % 170 + 40, (accent_seed * 17) % 140 + 80, (accent_seed * 29) % 160 + 60)
@@ -2588,7 +2704,9 @@ async def ai_training_history():
 
 def _check_gpu() -> dict:
     try:
-        import torch
+        torch = _optional_torch()
+        if torch is None:
+            return {"available": False}
         if torch.cuda.is_available():
             return {"available": True, "name": torch.cuda.get_device_name(0),
                     "vram_gb": round(torch.cuda.get_device_properties(0).total_memory / 1024**3, 2)}
@@ -2930,19 +3048,32 @@ async def _override_expiry_loop():
 
 @app.on_event("startup")
 async def startup():
-    if (
-        live_runtime.enabled
-        and LIVE_MODE
-        and not DEMO_MODE
-        and live_runtime.fail_fast_video
-        and live_runtime.startup_validation_error
-    ):
-        raise RuntimeError(f"Startup failed: {live_runtime.startup_validation_error}")
-    asyncio.create_task(_override_expiry_loop())
-    logger.info("[NEXUS] Runtime mode: live=%s demo=%s", LIVE_MODE, DEMO_MODE)
-    logger.info("[NEXUS] Live runtime status: %s", live_runtime.status())
-    logger.info("[NEXUS] Backend started. Modules loaded: %d/8",
-                8 - len(_import_errors))
+    try:
+        if (
+            live_runtime.enabled
+            and LIVE_MODE
+            and not DEMO_MODE
+            and live_runtime.startup_validation_error
+        ):
+            logger.error("[Startup] Live validation issue: %s", live_runtime.startup_validation_error)
+            live_runtime._activate_demo_fallback(live_runtime.startup_validation_error)
+
+        asyncio.create_task(_override_expiry_loop())
+
+        mode_label = "DEMO" if DEMO_MODE else "LIVE"
+        logger.info("[Startup] Running in %s MODE", mode_label)
+        logger.info("[Startup] Modules loaded: %d/8", 8 - len(_import_errors))
+        logger.info("[Startup] Fallback triggered: %s", live_runtime.fallback_triggered)
+        if live_runtime.fallback_triggered:
+            logger.warning("[Startup] Fallback reason: %s", live_runtime.fallback_reason)
+        logger.info("[Startup] Live runtime status: %s", live_runtime.status())
+        logger.info("[Startup] Server running at http://127.0.0.1:8000")
+    except Exception as exc:
+        logger.exception("[Startup] Non-fatal startup error: %s", exc)
+        try:
+            live_runtime._activate_demo_fallback(f"startup exception: {exc}")
+        except Exception:
+            logger.exception("[Startup] Failed to activate fallback mode")
 
 
 # ---------------------------------------------------------------
