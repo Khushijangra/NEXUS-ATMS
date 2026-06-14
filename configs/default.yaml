@@ -8,6 +8,11 @@ device:
   type: "cuda"                 # Force GPU for all training — cuda | cpu
   gpu_index: 0                 # GPU index (RTX 2050)
 
+# --- Device Policy (enforced at runtime) ---
+device_policy:
+  sb3: "cpu"                  # SB3 DQN/PPO always CPU
+  d3qn: "cuda"                # Native D3QN prefers CUDA
+
 # --- Environment Settings ---
 environment:
   network_file: "networks/single_intersection.net.xml"
@@ -33,7 +38,7 @@ sumo:
 agent:
   learning_rate: 0.0003        # Adam optimizer LR
   gamma: 0.99                  # Discount factor
-  device: "cuda"               # GPU training enforced
+  device: "cuda"               # Runtime-resolved by train.py/device_policy
 
   dqn:
     buffer_size: 100000        # Replay buffer size
@@ -42,6 +47,21 @@ agent:
     epsilon_start: 1.0
     epsilon_end: 0.05
     epsilon_decay: 0.995
+
+  d3qn:
+    hidden_dim: 256
+    learning_rate: 0.0003
+    gamma: 0.99
+    buffer_size: 100000
+    batch_size: 128
+    learning_starts: 5000       # Warmup >= 5k steps (stability gate)
+    train_freq: 4
+    gradient_steps: 1
+    tau: 0.005
+    epsilon_start: 1.0
+    epsilon_end: 0.05
+    exploration_fraction: 0.6   # Slow epsilon decay for long-horizon training
+    max_grad_norm: 10.0
 
   ppo:
     n_steps: 2048              # Steps per rollout
@@ -58,7 +78,30 @@ training:
   n_eval_episodes: 5
   save_freq: 50000
   seed: 42
+  deterministic: true
+  fail_on_nan: true
   log_interval: 100
+
+# --- Benchmark / Multi-seed Gate Settings ---
+benchmark:
+  multiseed:
+    timesteps: 100000
+    seeds: [42, 123, 999]
+    n_episodes: 10
+    include_graph_variant: false
+  gate:
+    require_improved_seeds: 2
+    max_throughput_drop_pct: 15.0
+
+# --- Network Coordination (Graph Layer) ---
+coordination:
+  graph_enabled: false
+  debug: false
+  graph_context_dim: 0
+  runtime:
+    enabled: false
+    safety_shield_enabled: true
+    min_action_hold_steps: 2
 
 # --- LSTM Predictor (GPU-accelerated) ---
 lstm:

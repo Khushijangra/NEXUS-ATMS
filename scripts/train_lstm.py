@@ -203,7 +203,7 @@ def train_lstm(
 
     # Import the project's LSTM architecture
     try:
-        from prediction.lstm_predictor import LSTMPredictor
+        from ai.prediction.lstm_predictor import LSTMPredictor
         predictor = LSTMPredictor(
             n_features=n_features,
             n_outputs=n_outputs,

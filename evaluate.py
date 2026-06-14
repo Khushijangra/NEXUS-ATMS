@@ -15,20 +15,41 @@ from typing import Dict, List
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from src.envs.sumo_env import SumoEnvironment
-from src.agents.dqn_agent import DQNAgent
-from src.agents.ppo_agent import PPOAgent
-from src.utils.logger import setup_logger
-from src.utils.metrics import MetricsTracker
-from src.utils.visualization import (
+from ai.envs.sumo_env import SumoEnvironment
+from ai.rl.dqn import DQNAgent
+from ai.rl.d3qn import D3QNAgent
+from ai.rl.ppo import PPOAgent
+from ai.utils.logger import setup_logger
+from ai.utils.metrics import MetricsTracker
+from ai.utils.visualization import (
     plot_comparison_bar,
     generate_report_figure,
 )
 
 
 def load_config(config_path: str) -> dict:
-    with open(config_path, "r") as f:
-        return yaml.safe_load(f)
+    with open(config_path, "r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f) or {}
+
+    base_path = cfg.get("extends")
+    if not base_path:
+        return cfg
+
+    parent = Path(config_path).parent / str(base_path)
+    with open(parent, "r", encoding="utf-8") as f:
+        base_cfg = yaml.safe_load(f) or {}
+
+    cfg.pop("extends", None)
+    return _deep_update(base_cfg, cfg)
+
+
+def _deep_update(base: Dict, override: Dict) -> Dict:
+    for k, v in (override or {}).items():
+        if isinstance(v, dict) and isinstance(base.get(k), dict):
+            _deep_update(base[k], v)
+        else:
+            base[k] = v
+    return base
 
 
 # ------------------------------------------------------------------
@@ -85,7 +106,12 @@ def run_rl_evaluation(
     Returns:
         Aggregated RL metrics.
     """
-    AgentClass = DQNAgent if agent_type == "dqn" else PPOAgent
+    if agent_type == "dqn":
+        AgentClass = DQNAgent
+    elif agent_type == "d3qn":
+        AgentClass = D3QNAgent
+    else:
+        AgentClass = PPOAgent
     agent = AgentClass(env=env, config=config)
     agent.load(model_path)
     return agent.evaluate(n_episodes=n_episodes)
@@ -96,10 +122,15 @@ def run_rl_evaluation(
 # ------------------------------------------------------------------
 def compare_results(baseline: Dict, rl_agent: Dict) -> Dict:
     """Calculate improvement percentages."""
+    def metric_value(metrics: Dict, key: str) -> float:
+        if key == "throughput":
+            return float(metrics.get("throughput", metrics.get("avg_throughput", 0.0)))
+        return float(metrics.get(key, 0.0))
+
     comparison: Dict = {}
     for key in ["avg_waiting_time", "avg_queue_length", "throughput"]:
-        bv = baseline.get(key, 0)
-        rv = rl_agent.get(key, 0)
+        bv = metric_value(baseline, key)
+        rv = metric_value(rl_agent, key)
         if bv != 0:
             pct = (rv - bv) / abs(bv) * 100
         else:
@@ -120,7 +151,7 @@ def main():
         description="Evaluate RL agent for traffic signal control"
     )
     parser.add_argument("--model", type=str, required=True, help="Path to trained model")
-    parser.add_argument("--agent", type=str, default="ppo", choices=["dqn", "ppo"])
+    parser.add_argument("--agent", type=str, default="ppo", choices=["dqn", "d3qn", "ppo"])
     parser.add_argument("--config", type=str, default="configs/default.yaml")
     parser.add_argument("--n-episodes", type=int, default=10)
     parser.add_argument("--gui", action="store_true")
@@ -164,6 +195,9 @@ def main():
     log.info(f"Running {args.agent.upper()} evaluation ({args.n_episodes} episodes)...")
     rl_results = run_rl_evaluation(
         env, args.model, args.agent, config, args.n_episodes
+    )
+    rl_results["throughput"] = float(
+        rl_results.get("throughput", rl_results.get("avg_throughput", 0.0))
     )
     log.info(f"RL Agent — Reward: {rl_results['mean_reward']:.2f} "
              f"Wait: {rl_results.get('avg_waiting_time', 0):.1f}s "

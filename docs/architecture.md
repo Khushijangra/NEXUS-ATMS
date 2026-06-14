@@ -56,7 +56,7 @@ Both modes feed the same RL agents, dashboards, and analytics pipeline.
 
 ## Environment Layer
 
-### SUMO Mode (`src/envs/sumo_env.py`, `src/envs/multi_agent_env.py`)
+### SUMO Mode (`ai/envs/sumo_env.py`, `ai/envs/multi_agent_env.py`)
 
 | Property | Single Intersection | Multi-Agent (4×4) |
 |----------|--------------------|--------------------|
@@ -112,10 +112,10 @@ Network architecture: `Input(state_dim) → FC(256) → FC(256) → Output(n_act
 
 | Component | File | Model | Output |
 |-----------|------|-------|--------|
-| LSTM Predictor | `prediction/lstm_predictor.py` | Seq2Seq bidir LSTM (Enc-Dec) | 30-min traffic forecast |
-| Anomaly Detector | `prediction/anomaly_detector.py` | Z-score + IQR + rate-of-change | Real-time anomaly alerts |
-| ML Anomaly | `prediction/ml_anomaly_detector.py` | IsolationForest + Autoencoder | F1-scored anomaly detection |
-| Explainable AI | `src/explainability/explainer.py` | SHAP, Gradient Saliency, Permutation | Feature importance, decision explanations |
+| LSTM Predictor | `ai/prediction/lstm_predictor.py` | Seq2Seq bidir LSTM (Enc-Dec) | 30-min traffic forecast |
+| Anomaly Detector | `ai/anomaly/anomaly_detector.py` | Z-score + IQR + rate-of-change | Real-time anomaly alerts |
+| ML Anomaly | `ai/anomaly/ml_anomaly_detector.py` | IsolationForest + Autoencoder | F1-scored anomaly detection |
+| Explainable AI | `ai/explainability/explainer.py` | SHAP, Gradient Saliency, Permutation | Feature importance, decision explanations |
 
 ---
 
@@ -148,7 +148,7 @@ Published via in-process bus or MQTT (`iot/mqtt_client.py`).
 
 ## Dashboard & API
 
-**Backend:** FastAPI (`dashboard/backend/main.py`)
+**Backend:** FastAPI (`backend/main.py`)
 
 | Category | Endpoints |
 |----------|-----------|
@@ -163,7 +163,7 @@ Published via in-process bus or MQTT (`iot/mqtt_client.py`).
 | Comparison | `/api/ai/comparison`, `/api/ai/training-history` |
 | WebSocket | `/ws/live` (1 Hz junction + traffic + carbon + emergency) |
 
-**Frontend:** Single-page HTML served from `dashboard/frontend/index.html`
+**Frontend:** Single-page HTML served from `frontend/index.html`
 - 4 tabs: Authority Dashboard, Citizen Portal, AI Analytics, System Architecture
 - Canvas-based Digital Twin (4×4 animated city at 60 fps)
 - Interactive 16-junction Signal Grid
@@ -187,8 +187,8 @@ Published via in-process bus or MQTT (`iot/mqtt_client.py`).
 5. Save best + final model
 6. Generate TensorBoard logs
 7. Run LSTM training pipeline (scripts/train_lstm.py)
-8. Run ML anomaly training (prediction/ml_anomaly_detector.py --generate)
-9. Generate XAI report (src/explainability/explainer.py)
+8. Run ML anomaly training (ai/anomaly/ml_anomaly_detector.py --generate)
+9. Generate XAI report (ai/explainability/explainer.py)
 ```
 
 ---
