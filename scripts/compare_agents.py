@@ -51,7 +51,7 @@ def _gpu_info() -> str:
 def _create_env(env_type: str, use_gui: bool = False):
     """Create the appropriate environment."""
     if env_type == "grid":
-        from src.envs.multi_agent_env import MultiAgentSumoEnv
+        from ai.envs.multi_agent_env import MultiAgentSumoEnv
         return MultiAgentSumoEnv(
             net_file="networks/grid_4x4/grid_4x4.net.xml",
             route_file="networks/grid_4x4/grid_4x4.rou.xml",
@@ -60,7 +60,7 @@ def _create_env(env_type: str, use_gui: bool = False):
             delta_time=5,
         )
     else:
-        from src.envs.sumo_env import SumoEnvironment
+        from ai.envs.sumo_env import SumoEnvironment
         return SumoEnvironment(
             net_file="networks/single_intersection.net.xml",
             route_file="networks/single_intersection.rou.xml",

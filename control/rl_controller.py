@@ -35,6 +35,13 @@ from stable_baselines3.common.noise import NormalActionNoise
 
 from control.traffic_env import TrafficEnvironment, IntersectionConfig
 
+try:
+    from ai.rl.graph_state_builder import GraphStateBuilder
+    from ai.rl.graph_coordinator import GraphCoordinator
+except Exception:  # pragma: no cover - optional runtime dependency path
+    GraphStateBuilder = None
+    GraphCoordinator = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -261,6 +268,10 @@ class MultiAgentCoordinator:
         self,
         intersection_ids: List[str],
         configs: Optional[Dict[str, IntersectionConfig]] = None,
+        graph_enabled: bool = False,
+        graph_debug: bool = False,
+        safety_shield_enabled: bool = True,
+        min_action_hold_steps: int = 2,
         **kwargs,
     ) -> None:
         cfgs = configs or {}
@@ -269,6 +280,124 @@ class MultiAgentCoordinator:
             for iid in intersection_ids
         }
         self._last_obs: Dict[str, np.ndarray] = {}
+        self.graph_enabled = bool(graph_enabled and GraphStateBuilder and GraphCoordinator)
+        self.graph_debug = bool(graph_debug)
+        self.safety_shield_enabled = bool(safety_shield_enabled)
+        self.min_action_hold_steps = max(1, int(min_action_hold_steps))
+        self._last_actions: Dict[str, int] = {}
+        self._action_hold: Dict[str, int] = {}
+
+        self._graph_builder = GraphStateBuilder(debug=self.graph_debug) if self.graph_enabled else None
+        self._graph_coordinator = GraphCoordinator(debug=self.graph_debug) if self.graph_enabled else None
+
+    def _snapshot_to_obs(self, snapshot: object, prev_obs: Optional[np.ndarray] = None) -> np.ndarray:
+        if hasattr(snapshot, "to_feature_vector") and callable(getattr(snapshot, "to_feature_vector")):
+            return np.asarray(snapshot.to_feature_vector(), dtype=np.float32).reshape(-1)
+
+        if isinstance(snapshot, dict):
+            queue = float(snapshot.get("queue_length", snapshot.get("vehicle_count", 0.0)))
+            wait = float(snapshot.get("waiting_time", 0.0))
+            inflow = float(snapshot.get("predicted_inflow", 0.0))
+            occ = float(snapshot.get("occupancy", snapshot.get("density", 0.0)))
+            emergency = 1.0 if bool(snapshot.get("emergency_flag", False)) else 0.0
+
+            obs = np.zeros((26,), dtype=np.float32)
+            for base in (0, 4, 8, 12):
+                obs[base] = queue / 30.0
+                obs[base + 1] = wait / 180.0
+                obs[base + 2] = inflow
+                obs[base + 3] = occ
+            obs[22] = emergency
+            return obs
+
+        if prev_obs is not None:
+            return prev_obs
+        return np.zeros((26,), dtype=np.float32)
+
+    def _snapshot_to_graph_node(self, snapshot: object) -> Dict[str, float]:
+        if isinstance(snapshot, dict):
+            return {
+                "queue_length": float(snapshot.get("queue_length", snapshot.get("vehicle_count", 0.0))),
+                "waiting_time": float(snapshot.get("waiting_time", 0.0)),
+                "current_phase": float(snapshot.get("current_phase", 0.0)),
+                "phase_time": float(snapshot.get("phase_time", 0.0)),
+                "predicted_inflow": float(snapshot.get("predicted_inflow", 0.0)),
+                "emergency_flag": bool(snapshot.get("emergency_flag", False)),
+            }
+
+        if hasattr(snapshot, "approaches"):
+            approaches = getattr(snapshot, "approaches", {}) or {}
+            queue = 0.0
+            wait = 0.0
+            flow = 0.0
+            for st in approaches.values():
+                queue += float(getattr(st, "queue_length", 0.0))
+                wait += float(getattr(st, "vehicle_count", 0.0))
+                flow += float(getattr(st, "flow_veh_h", 0.0))
+            return {
+                "queue_length": queue,
+                "waiting_time": wait,
+                "current_phase": 0.0,
+                "phase_time": 0.0,
+                "predicted_inflow": flow / max(len(approaches), 1),
+                "emergency_flag": bool(getattr(snapshot, "emergency_active", False)),
+            }
+
+        return {
+            "queue_length": 0.0,
+            "waiting_time": 0.0,
+            "current_phase": 0.0,
+            "phase_time": 0.0,
+            "predicted_inflow": 0.0,
+            "emergency_flag": False,
+        }
+
+    def _build_neighbor_map(self, ids: List[str]) -> Dict[str, Dict[str, Optional[str]]]:
+        neighbors: Dict[str, Dict[str, Optional[str]]] = {}
+        idx = {iid: i for i, iid in enumerate(ids)}
+        for i, iid in enumerate(ids):
+            neighbors[iid] = {
+                "north": ids[i - 1] if i - 1 >= 0 else None,
+                "south": ids[i + 1] if i + 1 < len(ids) else None,
+                "east": None,
+                "west": None,
+            }
+            if "_" in iid and iid.startswith("J"):
+                try:
+                    r, c = iid[1:].split("_")
+                    r_i = int(r)
+                    c_i = int(c)
+                    neighbors[iid] = {
+                        "north": f"J{r_i - 1}_{c_i}" if f"J{r_i - 1}_{c_i}" in idx else None,
+                        "south": f"J{r_i + 1}_{c_i}" if f"J{r_i + 1}_{c_i}" in idx else None,
+                        "west": f"J{r_i}_{c_i - 1}" if f"J{r_i}_{c_i - 1}" in idx else None,
+                        "east": f"J{r_i}_{c_i + 1}" if f"J{r_i}_{c_i + 1}" in idx else None,
+                    }
+                except Exception:
+                    pass
+        return neighbors
+
+    def _apply_safety_shield(self, iid: str, proposed: int) -> int:
+        if not self.safety_shield_enabled:
+            return int(proposed)
+
+        last = self._last_actions.get(iid)
+        hold = self._action_hold.get(iid, 0)
+        if last is None:
+            self._last_actions[iid] = int(proposed)
+            self._action_hold[iid] = 1
+            return int(proposed)
+
+        if proposed != last and hold < self.min_action_hold_steps:
+            self._action_hold[iid] = hold + 1
+            return int(last)
+
+        if proposed == last:
+            self._action_hold[iid] = hold + 1
+        else:
+            self._action_hold[iid] = 1
+            self._last_actions[iid] = int(proposed)
+        return int(proposed)
 
     def step(
         self, snapshots: Dict[str, "IntersectionSnapshot"]
@@ -278,13 +407,41 @@ class MultiAgentCoordinator:
         Observations are enriched with neighbour queue lengths before inference.
         """
         actions: Dict[str, int] = {}
+
+        local_obs: Dict[str, np.ndarray] = {}
+        for iid in self.agents.keys():
+            local_obs[iid] = self._snapshot_to_obs(snapshots.get(iid), self._last_obs.get(iid))
+
+        if self.graph_enabled and self._graph_builder and self._graph_coordinator:
+            try:
+                node_ids = list(self.agents.keys())
+                node_map = {iid: self._snapshot_to_graph_node(snapshots.get(iid, {})) for iid in node_ids}
+                neighbor_map = self._build_neighbor_map(node_ids)
+                node_features, adjacency, ordered = self._graph_builder.build(node_map, neighbor_map, node_order=node_ids)
+                enhanced = self._graph_coordinator.enhance(node_features, adjacency)
+
+                for idx, iid in enumerate(ordered):
+                    graph_ctx = enhanced[idx]
+                    agent = self.agents[iid]
+                    if hasattr(agent, "set_graph_context"):
+                        try:
+                            agent.set_graph_context(graph_ctx)
+                        except Exception:
+                            pass
+                    proposed = int(agent.predict(local_obs[iid]))
+                    actions[iid] = self._apply_safety_shield(iid, proposed)
+                    self._last_obs[iid] = local_obs[iid]
+
+                if self.graph_debug:
+                    logger.info("[Coordinator] graph inference active for %d intersections", len(ordered))
+                return actions
+            except Exception as exc:
+                logger.warning("[Coordinator] graph inference fallback to local mode: %s", exc)
+
         for iid, agent in self.agents.items():
-            env = TrafficEnvironment(config=agent.cfg)
-            obs, _ = env.reset()
-            if iid in snapshots:
-                env.inject_sensor_snapshot(snapshots[iid])
-                obs = env._build_obs()
-            actions[iid] = agent.predict(obs)
+            proposed = int(agent.predict(local_obs[iid]))
+            actions[iid] = self._apply_safety_shield(iid, proposed)
+            self._last_obs[iid] = local_obs[iid]
         return actions
 
     def train_all(self, **kwargs) -> None:
