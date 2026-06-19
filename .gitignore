@@ -67,3 +67,7 @@ coverage/
 *.bak
 *.orig
 *.rej
+
+data/raw/
+data/processed/
+uploads/
