@@ -391,3 +391,4 @@ class VideoMAEFeatureExtractor:
             return np.empty((0, self.hidden_size), dtype=np.float16)
 
         return np.concatenate(all_features, axis=0)
+

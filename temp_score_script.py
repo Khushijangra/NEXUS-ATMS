@@ -18,3 +18,4 @@ with torch.no_grad():
 
 with open("temp_score.txt", "w") as f:
     f.write(str(raw_score))
+

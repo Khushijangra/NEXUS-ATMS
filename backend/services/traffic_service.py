@@ -8,11 +8,11 @@ import collections
 from typing import List, Dict, Any, Optional
 from backend.core.utils import _safe_import
 
-RoadGeoMapper = _safe_import("ai.vision.geo_mapper", "RoadGeoMapper")
-VideoSimulator = _safe_import("ai.vision.camera", "VideoSimulator")
-MultiAgentD3QN = _safe_import("ai.rl.d3qn_agent", "MultiAgentD3QN")
-AnomalyDetector = _safe_import("ai.anomaly.detector", "AnomalyDetector")
-SHAPExplainer = _safe_import("ai.explainability.shap_parser", "SHAPExplainer")
+RoadGeoMapper = _safe_import("intelligence.perception.geo_mapper", "RoadGeoMapper")
+VideoSimulator = _safe_import("intelligence.perception.camera", "VideoSimulator")
+MultiAgentD3QN = _safe_import("intelligence.rl_agents.d3qn", "MultiAgentD3QN")
+AnomalyDetector = _safe_import("intelligence.anomaly_detection.detector", "AnomalyDetector")
+SHAPExplainer = _safe_import("intelligence.explainability.shap_parser", "SHAPExplainer")
 CarbonCalculator = _safe_import("ai.analytics.carbon", "CarbonCalculator")
 import backend.dependencies as deps
 
@@ -909,6 +909,7 @@ class LiveRuntime:
 
 
 live_runtime = LiveRuntime()
+
 
 
 

@@ -18,8 +18,8 @@ import torch
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.insert(0, PROJECT_ROOT)
 
-from control.traffic_env import TrafficEnvironment, IntersectionConfig, APPROACHES
-from core.hybrid_state import HybridStateBuilder, RLObservationMapper
+from intelligence.environments.traffic_env import TrafficEnvironment, IntersectionConfig, APPROACHES
+from intelligence.orchestration.hybrid_state import HybridStateBuilder, RLObservationMapper
 from backend.core.network_mapper import mapper
 from backend.runtime.event_bus import event_bus
 from backend.runtime.checkpoint_manager import CheckpointManager
@@ -382,3 +382,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         print("Shutting down Hybrid Runtime...")
+

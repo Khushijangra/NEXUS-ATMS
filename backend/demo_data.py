@@ -339,3 +339,4 @@ class DemoDataGenerator:
     def get_history(self, n: int = 100) -> List[Dict]:
         """Generate n snapshots in sequence."""
         return [self.get_snapshot() for _ in range(n)]
+

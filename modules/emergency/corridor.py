@@ -342,3 +342,4 @@ class EmergencyCorridorEngine:
             ),
             "overridden_junctions": list(self._overridden_signals.keys()),
         }
+

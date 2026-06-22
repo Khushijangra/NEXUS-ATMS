@@ -18,13 +18,13 @@ import torch
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from ai.envs.sumo_env import SumoEnvironment
-from ai.rl.dqn import DQNAgent
-from ai.rl.d3qn import D3QNAgent
-from ai.rl.ppo import PPOAgent
-from ai.utils.logger import setup_logger
-from ai.utils.metrics import MetricsTracker
-from ai.utils.visualization import plot_reward, plot_epsilon, plot_loss
+from intelligence.environments.sumo_env import SumoEnvironment
+from intelligence.rl_agents.dqn import DQNAgent
+from intelligence.rl_agents.d3qn import D3QNAgent
+from intelligence.rl_agents.ppo import PPOAgent
+from intelligence.utils.logger import setup_logger
+from intelligence.utils.metrics import MetricsTracker
+from intelligence.utils.visualization import plot_reward, plot_epsilon, plot_loss
 
 
 def load_config(config_path: str) -> dict:
@@ -346,3 +346,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

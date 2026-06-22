@@ -144,7 +144,7 @@ async def ai_anomaly_results():
     """Get ML anomaly detection results."""
     results = _load_json_safe("results/anomaly/anomaly_detection_results.json")
     if not results:
-        return {"status": "not_evaluated", "message": "Run: python -m ai.anomaly.ml_anomaly_detector --generate"}
+        return {"status": "not_evaluated", "message": "Run: python -m intelligence.anomaly_detection.ml_anomaly_detector --generate"}
     return results
 
 
@@ -153,7 +153,7 @@ async def ai_xai_importance():
     """Get feature importance analysis."""
     results = _load_json_safe("results/xai/xai_report.json")
     if not results:
-        return {"status": "not_computed", "message": "Run: python -m ai.explainability.explainer --model <path>"}
+        return {"status": "not_computed", "message": "Run: python -m intelligence.explainability.explainer --model <path>"}
     return results
 
 
@@ -195,6 +195,7 @@ async def ai_training_history():
     if lstm and "history" in lstm:
         return {"history": lstm["history"], "epochs": lstm.get("epochs_trained", 0)}
     return {"history": {}, "epochs": 0}
+
 
 
 

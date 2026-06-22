@@ -12,7 +12,7 @@ from typing import List
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from ai.utils.logger import setup_logger
+from intelligence.utils.logger import setup_logger
 
 
 def check_sumo() -> bool:
@@ -161,3 +161,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

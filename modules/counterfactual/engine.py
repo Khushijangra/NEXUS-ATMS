@@ -227,3 +227,4 @@ class CounterfactualEngine:
             }
             for s in self._snapshots[-last_n:]
         ]
+

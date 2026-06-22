@@ -58,24 +58,24 @@ from backend.core.config import _IS_RAILWAY, _demo_mode_env, _BOOT_DEMO_MODE, _i
 
 
 # Real data pipeline imports (optional; backend still runs if unavailable)
-VehicleDetector = _safe_import("ai.vision.detector", "VehicleDetector")
-VehicleTracker = _safe_import("ai.vision.tracker", "VehicleTracker")
-ZoneCounter = _safe_import("ai.vision.counter", "ZoneCounter")
-SpeedEstimator = _safe_import("ai.vision.speed_estimator", "SpeedEstimator")
-IncidentDetector = _safe_import("ai.vision.incident_detector", "IncidentDetector")
-TrafficRenderer = _safe_import("ai.vision.traffic_renderer", "TrafficRenderer")
-RoadCameraRenderer = _safe_import("ai.vision.road_camera_renderer", "RoadCameraRenderer")
-RoadGeoMapper = _safe_import("ai.vision.geo_mapper", "RoadGeoMapper")
+VehicleDetector = _safe_import("intelligence.perception.detector", "VehicleDetector")
+VehicleTracker = _safe_import("intelligence.perception.tracker", "VehicleTracker")
+ZoneCounter = _safe_import("intelligence.perception.counter", "ZoneCounter")
+SpeedEstimator = _safe_import("intelligence.perception.speed_estimator", "SpeedEstimator")
+IncidentDetector = _safe_import("intelligence.perception.incident_detector", "IncidentDetector")
+TrafficRenderer = _safe_import("intelligence.perception.traffic_renderer", "TrafficRenderer")
+RoadCameraRenderer = _safe_import("intelligence.perception.road_camera_renderer", "RoadCameraRenderer")
+RoadGeoMapper = _safe_import("intelligence.perception.geo_mapper", "RoadGeoMapper")
 
 SensorSimulator = _safe_import("iot.sensor_simulator", "SensorSimulator")
 SensorFusion = _safe_import("iot.data_fusion", "SensorFusion")
 MQTTClient = _safe_import("iot.mqtt_client", "MQTTClient")
 
-LSTMPredictor = _safe_import("ai.prediction.lstm_predictor", "LSTMPredictor")
-MLAnomalyDetector = _safe_import("ai.anomaly.ml_anomaly_detector", "MLAnomalyDetector")
+LSTMPredictor = _safe_import("intelligence.prediction.lstm_predictor", "LSTMPredictor")
+MLAnomalyDetector = _safe_import("intelligence.anomaly_detection.ml_anomaly_detector", "MLAnomalyDetector")
 
-RLController = _safe_import("control.rl_controller", "RLController")
-MultiAgentCoordinator = _safe_import("control.rl_controller", "MultiAgentCoordinator")
+RLController = _safe_import("intelligence.orchestration.rl_controller", "RLController")
+MultiAgentCoordinator = _safe_import("intelligence.orchestration.rl_controller", "MultiAgentCoordinator")
 
 logger = logging.getLogger("nexus-backend")
 
@@ -768,8 +768,8 @@ def _apply_live_runtime_camera_source(blocking_reopen: bool = True) -> None:
 # ---------------------------------------------------------------
 # REST Endpoints — AI / ML Analytics
 # ---------------------------------------------------------------
-MLAnomalyDetector = _safe_import("ai.anomaly.ml_anomaly_detector", "MLAnomalyDetector")
-TrafficXAI = _safe_import("ai.explainability.explainer", "TrafficXAI")
+MLAnomalyDetector = _safe_import("intelligence.anomaly_detection.ml_anomaly_detector", "MLAnomalyDetector")
+TrafficXAI = _safe_import("intelligence.explainability.explainer", "TrafficXAI")
 
 _ml_anomaly = None
 _xai_engine = None
@@ -846,3 +846,4 @@ if __name__ == "__main__":
     print(f"  API Docs  : http://localhost:{port}/docs")
     print("=" * 60)
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8080)), log_level="info")
+
