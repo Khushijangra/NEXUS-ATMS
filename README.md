@@ -14,6 +14,8 @@ NEXUS-ATMS is designed as a modular, extensible city-scale platform:
 
 ## Architecture Pipeline
 
+![NEXUS Architecture](docs/media/media__1781973451636.png)
+
 ```mermaid
 graph TD
     TS[Traffic State / Sensors] --> P[Prediction Layer]
