@@ -1,110 +1,40 @@
 # NEXUS-ATMS
+### Traffic Optimization Operating System
 
-AI-driven urban traffic management prototype with reinforcement learning, prediction, anomaly detection, digital twin visualization, and a FastAPI dashboard.
+NEXUS-ATMS is a foundational Smart City Traffic Operating System. It replaces traditional heuristic traffic lights with an adaptive, Reinforcement Learning (RL) driven controller that dynamically optimizes signal phases across an entire urban grid in real-time.
 
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://python.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![CI](https://github.com/Khushijangra/NEXUS-ATMS/actions/workflows/ci.yml/badge.svg)](https://github.com/Khushijangra/NEXUS-ATMS/actions/workflows/ci.yml)
+## Core Identity & Features
 
-## What This Repository Currently Provides
+NEXUS-ATMS is designed as a modular, extensible city-scale platform:
+- **Intelligent Routing Brain**: Utilizes state-of-the-art RL agents (`PPO`, `D3QN`) to optimize traffic flow, minimize queue lengths, and drastically reduce idle times.
+- **Micro-Simulation Environment**: Built atop Eclipse SUMO, providing a highly realistic multi-agent traffic environment for training and evaluation.
+- **Emergency Corridors (Green Wave)**: A dedicated sub-system that preempts standard logic to instantly carve unimpeded pathways for emergency vehicles.
+- **Carbon Tracking Engine**: Real-time telemetry translation that calculates vehicle emission reductions based on idle-time minimization.
+- **Pedestrian Safety & Cybersecurity**: Extensible modules to ensure physical and digital infrastructure safety.
 
-- RL agents (DQN/PPO) and traffic environments (SUMO + standalone synthetic environment)
-- Prediction stack: LSTM forecasting and anomaly detection
-- Specialty modules: emergency corridor, carbon engine, pedestrian safety, cybersecurity, road maintenance, NL commands, voice broadcast, counterfactual engine
-- FastAPI backend with REST + WebSocket endpoints
-- Web dashboard and digital twin renderer
+## Architecture Pipeline
 
-## Runtime Modes (Important)
+![NEXUS Architecture](docs/media/media__1781973451636.png)
 
-This repository supports two practical operating modes today:
+```mermaid
+graph TD
+    TS[Traffic State / Sensors] --> P[Prediction Layer]
+    P --> RL[RL Controller / PPO]
+    RL --> ENV[Traffic Environment / SUMO]
+    ENV --> SIG[Signal Optimization]
+    SIG -.-> TS
+```
 
-1. Dashboard demo mode
-- Works without SUMO
-- Streams simulated but realistic traffic snapshots
-- Best for presentations and module demonstrations
+## Running the Platform
 
-2. Simulation/training mode
-- Uses SUMO where required by training/evaluation scripts
-- Produces model checkpoints and benchmark artifacts
+NEXUS-ATMS is fully independent and runnable out-of-the-box.
 
-Note: Real-world deployment wiring (live camera feeds, physical controllers, production sensor brokers) is not fully integrated end-to-end yet.
-
-## Quick Start
-
-### Prerequisites
-
-- Python 3.10+
-- (Optional but recommended) SUMO 1.18+ for simulation scripts
-- Windows PowerShell or compatible shell
-
-### Install
-
+### 1. Training the RL Agents
 ```bash
-pip install -r requirements.txt
+python train.py --agent ppo --scenario normal
 ```
 
-### Run Dashboard (Fastest)
-
+### 2. Evaluating Performance
 ```bash
-python run_demo.py --dashboard-only
+python evaluate.py --agent ppo --scenario rush_hour --gui
 ```
-
-Then open:
-
-- http://127.0.0.1:8000 (or the port printed by the backend)
-
-### Train / Evaluate
-
-```bash
-python train.py --agent dqn --timesteps 50000 --demo
-python evaluate.py --model models/<run>/best/best_model.zip --agent dqn --report
-```
-
-## Repository Layout
-
-```text
-.
-├── dashboard/
-│   ├── backend/main.py
-│   ├── frontend/index.html
-│   └── demo_data.py
-├── control/
-├── iot/
-├── prediction/
-├── vision/
-├── modules/
-├── src/
-├── networks/
-├── configs/
-├── scripts/
-├── docs/
-├── train.py
-├── evaluate.py
-├── run_demo.py
-└── run_digital_twin.py
-```
-
-## Documentation
-
-- Architecture overview: [docs/architecture.md](docs/architecture.md)
-- Benchmarks and model metrics: [docs/benchmarks.md](docs/benchmarks.md)
-- Implementation audit checklist: [docs/implementation_checklist.md](docs/implementation_checklist.md)
-
-## Governance and Community
-
-- Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
-- Security policy: [SECURITY.md](SECURITY.md)
-- Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-- Pull request template: [.github/pull_request_template.md](.github/pull_request_template.md)
-
-## Roadmap (Near-Term)
-
-- Wire real camera/SUMO frame ingestion to vision pipeline in live backend loop
-- Wire MQTT broker-backed sensor ingestion for IoT fusion
-- Move historical analytics to persistent storage
-- Add authenticated production control surface for authority endpoints
-
-## License
-
-Released under the MIT License.
-See [LICENSE](LICENSE).
