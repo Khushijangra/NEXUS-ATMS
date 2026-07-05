@@ -74,7 +74,7 @@ def run_healthcheck():
         checks["PPO Loads"] = True
         
         from v2.safety.safety_wrapper import SafetyWrapper
-        sw = SafetyWrapper()
+        sw = SafetyWrapper(env)
         checks["Safety Loads"] = True
     except Exception as e:
         print(f"Error loading architecture: {e}")
