@@ -1,0 +1,2 @@
+class PriorityGraph:
+    pass

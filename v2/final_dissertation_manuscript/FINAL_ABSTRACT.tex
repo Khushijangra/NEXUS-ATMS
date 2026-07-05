@@ -1,0 +1,13 @@
+\begin{abstract}
+Urban traffic congestion remains a critical bottleneck in smart city infrastructure, inducing severe economic and environmental penalties. Addressing this volatility is paramount for establishing efficient and sustainable traffic control systems.
+
+However, existing Traffic Signal Control (TSC) systems rely on reactive heuristics that fail to understand spatial semantics, forecast future trajectories, or coordinate across graph topologies. Furthermore, they critically lack integrated mechanisms to optimize for carbon emissions or handle emergency routing, rendering them vulnerable to unpredictable disruptions.
+
+To overcome these limitations, we propose the Semantic Predictive Graph Reinforcement Learning (SPGRL) framework. This cyber-physical architecture processes raw traffic video via VideoMAE, MULDE, and GMM to extract a semantic anomaly $A_s$. Simultaneously, YOLO and DeepSORT track trajectories to derive a behavioral anomaly $A_b$. To ensure proactive routing, LSTM prediction yields future states $F_t$ alongside confidence estimation $C_f$. Concurrently, a graph representation $G_t$ coordinates the topological road network, while a dedicated carbon engine bounds emissions $C_t$ and an emergency routing protocol evaluates absolute priority $E_t$.
+
+The framework introduces nine major contributions: a complete SPGRL architecture, a dual-stream semantic-behavioral anomaly pipeline, specialized VideoMAE-MULDE-GMM and YOLO-DeepSORT engines, LSTM forecasting integration, and a topological MAPPO CTDE mechanism. These streams are concatenated into an ultra-dense unified state $Z_t$, empowering joint optimization for carbon minimization and emergency handling without catastrophic interference, all bounded by a deterministic safety shield.
+
+The proposed evaluation protocol is designed to investigate this multi-objective joint formulation leveraging SUMO, BDD100K, and Cityscapes across 64 cooperative intersections for 10,000 continuous episodes over 5 random seeds on an NVIDIA A100 computing cluster. 
+
+Ultimately, this framework is anticipated to demonstrate that extreme multimodality can be effectively synthesized within deep reinforcement learning for sustainable traffic control and resilient real-world deployment.
+\end{abstract}

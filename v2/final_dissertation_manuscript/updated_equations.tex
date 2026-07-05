@@ -1,0 +1,31 @@
+% Updated Equations for SPGRL
+
+% Semantic anomaly
+$$ A_s = -\log P(x) $$
+
+% Behavioral anomaly
+$$ A_b = 0.30z_v + 0.25z_a + 0.20j_t + 0.15H + 0.10W $$
+
+% Fusion
+$$ A_t = \alpha A_s + (1-\alpha) A_b $$
+
+% Forecast confidence
+$$ C_f = 1 - \frac{\sigma(F_t)}{\max(\sigma)} $$
+
+% Carbon
+$$ C_t = \sum_i CO_2(v_i, a_i) $$
+
+% Unified state
+$$ Z_t = [G_t, A_s, A_b, F_t, C_f, C_t, E_t] $$
+
+% MAPPO objective
+$$ L_{PPO} = \mathbb{E}[\min(r_t A_t, \text{clip}(r_t) A_t)] $$
+
+% Joint optimization
+$$ L_{total} = L_{PPO} + \lambda_1 L_{LSTM} + \lambda_2 L_{GNN} $$
+
+% Gradient similarity
+$$ \text{Cos}(\theta) = \frac{g_1 \cdot g_2}{|g_1| |g_2|} $$
+
+% Final reward
+$$ R_t = w_1 R_{traffic} - w_2 C_t - w_3 A_t + w_4 E_t + w_5 C_f $$

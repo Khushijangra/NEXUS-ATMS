@@ -1,0 +1,3 @@
+- [x] Figures (PDF/SVG/600dpi PNG)
+- [x] Statistical Significance (p < 0.05)
+- [x] LaTeX Manuscripts

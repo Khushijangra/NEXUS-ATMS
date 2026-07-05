@@ -1,0 +1,32 @@
+{
+    "VideoMAE_checkpoint": {
+        "exists": false,
+        "path": "argus_stream_extracted\\argus stream A\\checkpoints\\best.pt",
+        "size_bytes": null,
+        "sha256": null
+    },
+    "MULDE_checkpoint": {
+        "exists": false,
+        "path": "argus_stream_extracted\\argus stream A\\checkpoints\\best.pt",
+        "size_bytes": null,
+        "sha256": null
+    },
+    "GMM_model": {
+        "exists": false,
+        "path": "argus_stream_extracted\\argus stream A\\checkpoints\\best.pkl",
+        "size_bytes": null,
+        "sha256": null
+    },
+    "UA-DETRAC_video": {
+        "exists": false,
+        "path": "datasets\\ua_detrac\\MVI_20011.mp4",
+        "size_bytes": null,
+        "sha256": null
+    },
+    "config_file": {
+        "exists": false,
+        "path": "config\\default.yaml",
+        "size_bytes": null,
+        "sha256": null
+    }
+}

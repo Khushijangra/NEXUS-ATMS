@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  hpc-node:
+    build: .
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - ../:/workspace
+    working_dir: /workspace

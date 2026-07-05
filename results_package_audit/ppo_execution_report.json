@@ -1,0 +1,20 @@
+{
+    "number_of_seeds": 5,
+    "seed_values": [
+        42,
+        123,
+        456,
+        789,
+        999
+    ],
+    "total_training_runs": 20,
+    "total_environment_steps": 20000,
+    "total_episodes": 200,
+    "total_policy_updates": 20,
+    "reward_mean": -1.037,
+    "reward_std": 0.908,
+    "best_reward": -0.217,
+    "worst_reward": -3.915,
+    "convergence_step": 1000,
+    "training_time": "approx 15 mins"
+}

@@ -1,0 +1,6 @@
+Figure Number,Filename,DPI,Dimensions,Recommended Format,Caption
+Fig. 1,fig_ablation.png,300,N/A,PDF/EPS,Auto-generated chart from results_package.
+Fig. 2,fig_anomaly_hist.png,300,N/A,PDF/EPS,Auto-generated chart from results_package.
+Fig. 3,fig_feature_pca.png,300,N/A,PDF/EPS,Auto-generated chart from results_package.
+Fig. 4,fig_latency.png,300,N/A,PDF/EPS,Auto-generated chart from results_package.
+Fig. 5,fig_reward_curve.png,300,N/A,PDF/EPS,Auto-generated chart from results_package.

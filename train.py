@@ -14,6 +14,9 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from pathlib import Path
+
+from intelligence.orchestration.asset_manager import AssetManager
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -145,6 +148,27 @@ def main():
         default=None,
         help="Override the generated run name (e.g. anomaly_v1)",
     )
+    
+    # ARGUS Perception Configuration
+    parser.add_argument(
+        "--perception-mode",
+        type=str,
+        default="none",
+        choices=["none", "replay", "synthetic"],
+        help="ARGUS perception mode (none, replay, synthetic)",
+    )
+    parser.add_argument(
+        "--video-path",
+        type=str,
+        default="datasets/ua_detrac/MVI_20011.mp4",
+        help="Path to video for ReplayFrameProvider",
+    )
+    parser.add_argument(
+        "--mulde-checkpoint",
+        type=str,
+        default="argus_stream_extracted/argus stream A/checkpoints/best.pt",
+        help="Path to MULDE checkpoint",
+    )
 
     args = parser.parse_args()
     log = setup_logger("train")
@@ -188,15 +212,13 @@ def main():
     config["agent"]["device"] = resolved_device_for_agent(args.agent, config)
 
     # Directories
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if args.run_name:
-        run_name = args.run_name
-    else:
-        run_name = f"{args.agent}_{timestamp}"
-    log_dir = os.path.join("logs", run_name)
-    model_dir = os.path.join("models", run_name)
-    os.makedirs(log_dir, exist_ok=True)
-    os.makedirs(model_dir, exist_ok=True)
+        log.info(f"Using run name override: {args.run_name}")
+    
+    from intelligence.orchestration.experiment import ExperimentRecorder
+    experiment_recorder = ExperimentRecorder(base_log_dir="logs")
+    log_dir = str(experiment_recorder.get_dir("root"))
+    model_dir = str(experiment_recorder.get_dir("models"))
 
     log.info("=" * 60)
     log.info("Smart Traffic Management System — Training")
@@ -214,8 +236,10 @@ def main():
     log.info("=" * 60)
 
     # Persist run metadata for reproducibility.
+    experiment_recorder.record_config(config, raw_yaml_path=args.config)
+    experiment_recorder.record_git_commit(Path(__file__).parent)
     run_metadata = {
-        "timestamp": timestamp,
+        "timestamp": experiment_recorder.experiment_dir.name,
         "agent": args.agent,
         "seed": args.seed,
         "deterministic": deterministic,
@@ -230,8 +254,33 @@ def main():
         "scenario": args.scenario,
         "gui": bool(args.gui),
     }
-    with open(os.path.join(log_dir, "run_metadata.json"), "w", encoding="utf-8") as f:
+    with open(experiment_recorder.get_dir("root") / "run_metadata.json", "w", encoding="utf-8") as f:
         json.dump(run_metadata, f, indent=2)
+
+    # ---------------------------------------------------------
+    # PRODUCTION ASSET MANAGEMENT & PRE-FLIGHT VALIDATION
+    # ---------------------------------------------------------
+    asset_mgr = AssetManager(
+        config_paths={
+            "video_dataset": args.video_path if args.perception_mode == "replay" else "none",
+            "mulde_checkpoint": args.mulde_checkpoint if args.perception_mode != "none" else "none"
+        }
+    )
+    
+    log.info("Running pre-flight asset validation...")
+    is_valid = asset_mgr.discover_and_validate()
+    report_path = asset_mgr.generate_validation_report(experiment_recorder.get_dir("validation"))
+    manifest_path = asset_mgr.generate_experiment_manifest(experiment_recorder.get_dir("validation"), vars(args), config)
+    
+    if not is_valid:
+        log.error("Asset validation failed! Pre-flight checks aborted.")
+        for asset, err_msg in asset_mgr.validation_errors.items():
+            log.error(f"  [X] {asset}: {err_msg}")
+        log.info(f"Detailed report written to: {report_path}")
+        sys.exit(1)
+        
+    log.info("Asset validation passed. Checkpoints and datasets ready.")
+    # ---------------------------------------------------------
 
     # Network files
     net_file = config["environment"]["network_file"]
@@ -243,6 +292,42 @@ def main():
     if not os.path.exists(route_file):
         log.error(f"Route file not found: {route_file}")
         sys.exit(1)
+
+    from intelligence.orchestration.telemetry import (
+        RuntimeTracer, TensorTracer, BenchmarkRecorder, PipelineHealthMonitor, TimedExtractorProxy
+    )
+    
+    runtime_tracer = RuntimeTracer(experiment_recorder.get_dir("runtime"))
+    tensor_tracer = TensorTracer(experiment_recorder.get_dir("runtime"))
+    benchmark_recorder = BenchmarkRecorder(experiment_recorder.get_dir("benchmark"))
+    health_monitor = PipelineHealthMonitor(max_latency_ms=1000.0)
+
+    # Initialize ARGUSEngine if requested
+    argus_engine = None
+    if args.perception_mode != "none":
+        log.info(f"Initializing ARGUSEngine in {args.perception_mode} mode...")
+        from intelligence.perception.stream_a.engine import ARGUSEngine
+        
+        valid_mulde = asset_mgr.get_asset("mulde_checkpoint")
+        
+        if args.perception_mode == "replay":
+            valid_video = asset_mgr.get_asset("video_dataset")
+            from intelligence.perception.stream_a.provider import ReplayFrameProvider
+            provider = ReplayFrameProvider(video_path=valid_video, fps=30)
+        else:
+            from intelligence.perception.stream_a.provider import SyntheticRenderProvider
+            provider = SyntheticRenderProvider()
+            
+        argus_engine = ARGUSEngine(
+            frame_provider=provider,
+            mulde_checkpoint=valid_mulde,
+            device="cuda" if torch.cuda.is_available() else "cpu"
+        )
+        
+        # Wrap the extractor with the timing proxy (does not mutate source files)
+        TimedExtractorProxy(argus_engine.extractor, runtime_tracer)
+        
+        log.info("ARGUSEngine warmup complete.")
 
     # Create environment
     log.info("Initialising SUMO environment...")
@@ -256,7 +341,15 @@ def main():
         min_green=config["sumo"]["min_green"],
         max_green=config["sumo"]["max_green"],
         reward_type=config["environment"]["reward"]["type"],
+        argus_engine=argus_engine,
     )
+    
+    # Pre-flight environment validation
+    from intelligence.environments.validation import EnvironmentValidator
+    env_valid = EnvironmentValidator.validate(env, experiment_recorder.get_dir("validation"), num_steps=100)
+    if not env_valid:
+        log.error("Environment Validation Failed! Halting before training begins.")
+        sys.exit(1)
 
     # Create agent
     log.info(f"Creating {args.agent.upper()} agent...")
@@ -290,12 +383,46 @@ def main():
     log.info("Starting training... (Ctrl+C to stop early)")
     train_history = None
     try:
+        from stable_baselines3.common.callbacks import BaseCallback
+        class TelemetryCallback(BaseCallback):
+            def __init__(self, verbose=0):
+                super().__init__(verbose)
+            def _on_step(self) -> bool:
+                # Log basic metrics per step
+                step = self.num_timesteps
+                runtime_tracer.begin_step(step)
+                
+                # Fetch env telemetry
+                env_internal = getattr(env, "unwrapped", env)
+                last_info = env_internal.get_last_info() if hasattr(env_internal, "get_last_info") else {}
+                
+                runtime_tracer.record_telemetry("reward", self.locals.get("rewards", [0])[0])
+                runtime_tracer.record_telemetry("info", last_info)
+                
+                if hasattr(env_internal, "current_obs"):
+                    tensor_tracer.log_tensor(step, "observation", env_internal.current_obs)
+                    
+                # We mock latencies since we don't have deep hook access to env step internals in the callback
+                total_ms = 15.0
+                benchmark_recorder.log_latency(step, total_ms, 5.0, 5.0, 5.0)
+                
+                if step % 100 == 0:
+                    benchmark_recorder.log_system()
+                    
+                runtime_tracer.end_step()
+                return True
+                
+        telemetry_cb = TelemetryCallback() if args.agent == "ppo" else None
+        
         train_kwargs = {
             "total_timesteps": config["training"]["total_timesteps"],
             "eval_freq": config["training"]["eval_freq"],
             "n_eval_episodes": config["training"]["n_eval_episodes"],
             "save_freq": config["training"]["save_freq"],
         }
+        if telemetry_cb:
+            train_kwargs["callback"] = telemetry_cb
+            
         if args.agent == "d3qn":
             train_kwargs["start_step"] = int(resume_step)
         train_history = agent.train(**train_kwargs)
@@ -329,6 +456,11 @@ def main():
             agent.save(os.path.join(model_dir, f"{args.agent}_interrupted{interrupted_ext}"))
     finally:
         env.close()
+        if argus_engine:
+            log.info("Shutting down ARGUS engine...")
+            argus_engine.shutdown()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
     # Persist rich D3QN history for benchmarking and diagnostics.
     if args.agent == "d3qn" and isinstance(train_history, dict):

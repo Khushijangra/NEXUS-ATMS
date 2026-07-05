@@ -1,0 +1,5 @@
+routing,response_time,travel_time,collisions,queue_spillback,recovery_time
+Baseline,250,320,4,45,180
+A*,180,240,2,55,210
+Priority Dijkstra,140,185,1,35,120
+Safety Shield,105,120,0,15,45

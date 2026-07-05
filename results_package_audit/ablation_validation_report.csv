@@ -1,0 +1,5 @@
+Architecture,Must Exist,number_of_seeds,reward_mean,reward_std,queue_mean,wait_mean,throughput_mean,95CI
+baseline,YES,5,-0.8745999999999998,0.301129830803924,N/A (aggregated in rewards),N/A (aggregated in rewards),N/A (aggregated in rewards),0.263951934518389
+feature,YES,5,-1.0565000000000004,1.1050264137114563,N/A (aggregated in rewards),N/A (aggregated in rewards),N/A (aggregated in rewards),0.9685983577727157
+anomaly,YES,5,-0.8389999999999995,0.7854664219430384,N/A (aggregated in rewards),N/A (aggregated in rewards),N/A (aggregated in rewards),0.6884916748952011
+full,YES,5,-1.3814999999999997,1.4446742712459444,N/A (aggregated in rewards),N/A (aggregated in rewards),N/A (aggregated in rewards),1.2663128313335534

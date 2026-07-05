@@ -1,0 +1,6 @@
+epoch,conflict_ppo_lstm,conflict_ppo_gnn,grad_norm_total
+0,False,False,4.803908348083496
+10,False,False,5.015438079833984
+20,False,False,4.299522876739502
+30,True,False,3.118767023086548
+40,True,False,5.1783246994018555

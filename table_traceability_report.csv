@@ -1,0 +1,7 @@
+Paper Table,Paper Value,Source File,Source Value,Match
+Target Latency Profiling,306.02,benchmark_metrics.json,306.021...,YES
+Target Latency Profiling,21.59,benchmark_metrics.json,21.593...,YES
+Target Latency Profiling,25.91,benchmark_metrics.json,25.908...,YES
+Target Latency Profiling,36.77,benchmark_metrics.json,36.767...,YES
+Reinforcement Learning Evaluation Metrics,-0.875,ablation.csv,-0.874...,YES
+Reinforcement Learning Evaluation Metrics,-1.381,ablation.csv,-1.381...,YES

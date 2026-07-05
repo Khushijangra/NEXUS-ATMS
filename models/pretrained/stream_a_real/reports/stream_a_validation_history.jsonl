@@ -1,0 +1,5 @@
+{"clip_val_AUC": 0.4973202639152836, "elapsed_sec": 0.4755432605743408, "epoch": 10, "learning_rate": 0.0001, "primary_metric": 0.4973202639152836, "train_loss": 383.2754542032878}
+{"clip_val_AUC": 0.5059599702781619, "elapsed_sec": 0.7175118923187256, "epoch": 20, "learning_rate": 0.0001, "primary_metric": 0.5059599702781619, "train_loss": 381.5579020182292}
+{"clip_val_AUC": 0.5109171226019287, "elapsed_sec": 0.4645967483520508, "epoch": 30, "learning_rate": 0.0001, "primary_metric": 0.5109171226019287, "train_loss": 380.4677963256836}
+{"clip_val_AUC": 0.5131230606958099, "elapsed_sec": 0.4814126491546631, "epoch": 40, "learning_rate": 0.0001, "primary_metric": 0.5131230606958099, "train_loss": 379.28148142496747}
+{"clip_val_AUC": 0.5157452058178471, "elapsed_sec": 0.4997880458831787, "epoch": 50, "learning_rate": 0.0001, "primary_metric": 0.5157452058178471, "train_loss": 378.7293192545573}

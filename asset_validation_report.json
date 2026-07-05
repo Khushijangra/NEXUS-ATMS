@@ -1,0 +1,10 @@
+{
+    "status": "FAILED",
+    "missing_assets": [
+        "VideoMAE_checkpoint",
+        "MULDE_checkpoint",
+        "GMM_model",
+        "UA-DETRAC_video",
+        "config_file"
+    ]
+}

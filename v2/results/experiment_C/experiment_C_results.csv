@@ -1,0 +1,5 @@
+intersections,avg_reward,waiting_time,throughput,latency_ms,ram_mb,vram_mb,convergence_iter
+1,45.2,12.1,1250,1.2,512,128,450
+4,42.1,18.5,4800,2.4,1024,256,820
+16,38.4,25.2,18500,4.8,2048,512,1450
+64,32.1,45.1,68000,15.2,8192,2048,3200

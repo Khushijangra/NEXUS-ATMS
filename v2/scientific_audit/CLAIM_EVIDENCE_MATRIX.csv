@@ -1,0 +1,6 @@
+Claim_ID,Equation,Algorithm,Source_File,Experiment,Required_HPC_Evidence
+C1,F_t,LSTM_Autoencoder,v2/models/lstm.py,Predictive_Baseline,Reward curves over 10k episodes
+C2,C_t,Carbon_Penalty,v2/rl/reward.py,Carbon_Ablation,Pareto boundary of emissions vs delay
+C4,A_t,Fusion,v2/models/fusion.py,Anomaly_Detection,F1/ROC-AUC on BDD100k
+C6,L_PPO,MAPPO,v2/rl/mappo.py,Long_Horizon,Convergence telemetry for 5 seeds
+C7,L_total,Joint_Loss,v2/rl/joint.py,Joint_Optimization,Cosine similarity logs over epochs

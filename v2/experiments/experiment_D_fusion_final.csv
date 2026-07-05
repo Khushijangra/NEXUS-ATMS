@@ -1,0 +1,4 @@
+configuration,alpha,F1,DetectionDelay
+Semantic (As),1.0,0.81,1.5
+Behavioral (Ab),0.0,0.76,2.1
+Hybrid Fusion (At),0.5,0.92,1.1

@@ -1,0 +1,11 @@
+{
+    "cold_start_latency_ms": 306.0213999997359,
+    "warm_latency_ms": 21.202340700037894,
+    "median_latency_ms": 21.593199999188073,
+    "p95_latency_ms": 25.908184997751956,
+    "p99_latency_ms": 36.7670279979211,
+    "throughput_fps": 47.16460385896038,
+    "ram_utilization_mb": 1885.12109375,
+    "vram_utilization_mb": 11.6533203125,
+    "gpu_utilization_percent": 31.0
+}

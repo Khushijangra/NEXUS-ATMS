@@ -1,0 +1,6 @@
+Experiment,Dataset,Topology,Episodes,Seeds,Est_GPU_Hours,Est_Storage,Expected_Outputs,Paper_Dependency
+Semantic,BDD100k,N/A,N/A,5,72,500GB,semantic_results.csv,Paper3
+GNN Scaling,SUMO,1x1 to 8x8,100,1,12,50GB,gnn_scaling.csv,Paper4
+MAPPO Convergence,SUMO,4x4,10000,5,240,1TB,mappo_rewards.csv,Paper4
+Joint Optimization,SUMO,4x4,5000,3,120,500GB,joint_similarity.csv,Paper5
+Emergency,SUMO,4x4,1000,5,24,100GB,emergency_results.csv,Paper5

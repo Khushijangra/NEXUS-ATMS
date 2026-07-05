@@ -1,0 +1,12 @@
+Claim,Status,Location
+Semantic anomaly engine,Mathematically defined,Section III-B
+Behavioral anomaly engine,Mathematically defined,Section III-C
+Traffic prediction,Mathematically defined,Section III-D
+Graph representation,Mathematically defined,Section III-E
+Carbon optimization,Mathematically defined,Section III-F
+Emergency routing,Mathematically defined,Section III-G
+Unified state Zt,Mathematically defined,Section III-H
+MAPPO CTDE,Mathematically defined,Section III-I
+Joint optimization,Mathematically defined,Section III-J
+Safety Shield,Mathematically defined,Section III-K
+Reward Optimization,Mathematically defined,Section IV

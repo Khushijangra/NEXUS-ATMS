@@ -1,0 +1,21 @@
+{
+    "Git_Commit": "25ebf20",
+    "Dataset_Version": "v1.0",
+    "Config_Hash": "de64a496755741497a270597ce232831c9847b37f501cfe9e39b533aac7abeaa",
+    "Seed": 42,
+    "Timestamp": "2026-07-05T10:12:39.176068",
+    "Host": "Khushi-Vivobook",
+    "OS": "Windows",
+    "CPU": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+    "Python_Version": "3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]",
+    "Torch_Version": "2.6.0+cu124",
+    "CUDA_Available": true,
+    "CUDA_Version": "12.4",
+    "Total_Episodes": 1,
+    "Best_Avg_Reward": -Infinity,
+    "Best_Queue": Infinity,
+    "Checkpoint_SHA256": {
+        "latest_actor.pth": "47e00370a6f30e60a00ff0a6c0fe521e7d71c71311b0d80dd6b4f269dbb95198",
+        "latest_critic.pth": "78f7bdd812471994d632c4957197dbc9bff5fa728adc996825c0c100c7b621b5"
+    }
+}

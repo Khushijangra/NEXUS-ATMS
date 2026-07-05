@@ -1,0 +1,9 @@
+Claim_ID,Paper,Claim_Description,Classification
+C1,Paper2,LSTM forecasting improves queue management,C
+C2,Paper2,Carbon reward reduces CO2 emissions,C
+C3,Paper3,VideoMAE extracts semantic anomalies,B
+C4,Paper3,Fusion of As and Ab improves detection F1,C
+C5,Paper4,GNN scaling avoids gradient explosion,B
+C6,Paper4,MAPPO converges on 64 intersection grids,C
+C7,Paper5,Joint optimization avoids catastrophic interference,C
+C8,Paper5,Safety shield guarantees collision avoidance,A

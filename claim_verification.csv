@@ -1,0 +1,19 @@
+Claim,Context,Supported,Required Rewrite
+robust,"egacy vision systems, proposed framework provides robust, zero-label self-supervised video anomaly detecti",PARTIAL,Requires manual review
+robust,mer backbone is motivated to learn the underlying robust temporal correlations and motion dynamics of the ,PARTIAL,Requires manual review
+robust,rors during training and provides a statistically robust mechanism that allows the anomaly intensity to be,PARTIAL,Requires manual review
+robust," the final transformer block, yielding a compact, robust 768-dimensional signature vector that encapsulate",PARTIAL,Requires manual review
+robust,ction with multi-agent reinforcement learning for robust traffic signal control.   \textit{Note on Empiric,PARTIAL,Requires manual review
+robust,"ions—proves that the architecture is structurally robust and deployment-ready.  However, the definitive as",PARTIAL,Requires manual review
+effective,validated Reinforcement Learning (RL) as a highly effective paradigm for adaptive traffic signal control. Whi,PARTIAL,Requires manual review
+real-time,"es into the numerical D3QN state vector, enabling real-time context-aware phase switching.     \item Ensuring",PARTIAL,Requires manual review
+real-time," for each processed temporal clip. The score is a real-time quantifiable measure of scene volatility, where v",PARTIAL,Requires manual review
+real-time,"c optimization (via the numeric bounds in $R_t$), real-time visual anomaly mitigation (via the severity scala",PARTIAL,Requires manual review
+significant,g Double Deep Q-Networks (D3QN) have demonstrated significant efficacy in spatial coordination and delay reduct,PARTIAL,Requires manual review
+optimal,"ntinuous forward pass from raw pixel ingestion to optimal phase actuation, rather than treating visual anom",PARTIAL,Requires manual review
+optimal,r and queries the target networks to identify the optimal phase action. The \textit{Cybersecurity Validatio,PARTIAL,Requires manual review
+optimal,are Deep Q Network} \label{subsec:graph_dqn}  The optimal signal phasing is determined by a Graph-Aware Due,PARTIAL,Requires manual review
+optimal,l of the D3QN agent is to learn the deterministic optimal policy $\pi^*(S_t)$. The policy dictates the traf,PARTIAL,Requires manual review
+optimal,$ to execute given the current hybrid state.  The optimal action selection operates as a greedy maximizatio,PARTIAL,Requires manual review
+optimal,on-control pipeline framework routes the proposed optimal action $a_t$ through a deterministic safety valid,PARTIAL,Requires manual review
+better,ively avoiding secondary collisions and achieving better network-wide throughput than unimodal baselines. ,PARTIAL,Requires manual review

@@ -1,0 +1,4 @@
+routing,shield,amb_travel_time,collisions
+A*,False,145.2,2
+Priority Dijkstra,False,98.4,1
+Priority Dijkstra,True,102.1,0

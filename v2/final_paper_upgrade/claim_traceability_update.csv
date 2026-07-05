@@ -1,0 +1,13 @@
+Claim,Status,Location
+Semantic anomaly engine As,Mathematically defined,Section III-B
+Behavioral anomaly engine Ab,Mathematically defined,Section III-C
+Traffic prediction Ft Cf,Mathematically defined,Section III-D
+Graph representation Gt,Mathematically defined,Section III-E
+Carbon optimization Ct,Mathematically defined,Section III-F
+Emergency routing Et,Mathematically defined,Section III-G
+Unified state Zt,Mathematically defined,Section III-H
+Joint optimization L_total,Mathematically defined,Section III-J
+Safety Shield,Mathematically defined,Section III-K
+Experimental Verification,Awaiting HPC,Section VIII-A
+MAPPO Convergence Analysis,Awaiting HPC,Section VIII-F
+Ablation Study,Awaiting HPC,Section VIII-K

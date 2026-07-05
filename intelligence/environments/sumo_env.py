@@ -12,6 +12,9 @@ from typing import Dict, Tuple, Optional, List
 import traci
 import sumolib
 
+from intelligence.orchestration.hybrid_state import HybridStateBuilder, RLObservationMapper
+from modules.carbon.engine import CarbonCreditEngine
+
 
 class SumoEnvironment(gym.Env):
     """
@@ -47,6 +50,8 @@ class SumoEnvironment(gym.Env):
         max_green: int = 60,
         reward_type: str = "combined",
         render_mode: Optional[str] = None,
+        carbon_weight: float = 10.0,
+        **kwargs,
     ):
         """
         Initialize the SUMO environment.
@@ -62,6 +67,7 @@ class SumoEnvironment(gym.Env):
             max_green: Maximum green phase duration
             reward_type: Reward function type (waiting_time | queue | combined)
             render_mode: Gymnasium render mode
+            argus_engine: Optional ARGUSEngine for perception anomalies
         """
         super().__init__()
 
@@ -75,6 +81,8 @@ class SumoEnvironment(gym.Env):
         self.max_green = max_green
         self.reward_type = reward_type
         self.render_mode = render_mode
+        self.carbon_weight = carbon_weight
+        self.argus_engine = kwargs.get("argus_engine", None) if "kwargs" in locals() else None
 
         # Traffic light settings
         self.tl_id = "center"           # Traffic light ID in the network
@@ -84,8 +92,7 @@ class SumoEnvironment(gym.Env):
 
         # State dimensions
         self.num_approaches = 4         # N, S, E, W
-        # State: queue(4) + wait(4) + phase_onehot(4) + time_since_change(1)
-        self.state_dim = self.num_approaches * 2 + self.num_green_phases + 2 + 1
+        self.state_dim = 28             # Canonical 28-D HybridState space
 
         # Gymnasium spaces
         self.observation_space = spaces.Box(
@@ -125,6 +132,17 @@ class SumoEnvironment(gym.Env):
         self._total_vehicles_left = 0
         self._phase_changes = 0
 
+        # Carbon metrics
+        self.carbon_engine = CarbonCreditEngine()
+        self._episode_co2_kg = 0.0
+        self._episode_fuel_l = 0.0
+        
+        # Reward components
+        self._episode_wait_reward = 0.0
+        self._episode_queue_reward = 0.0
+        self._episode_throughput_reward = 0.0
+        self._episode_carbon_reward = 0.0
+
     def _start_sumo(self) -> None:
         """Start SUMO simulation process."""
         if self._sumo_running:
@@ -154,39 +172,60 @@ class SumoEnvironment(gym.Env):
 
     def _get_state(self) -> np.ndarray:
         """
-        Get current state observation vector.
+        Get current state observation vector via HybridStateBuilder.
 
         Returns:
-            Normalized state vector of shape (state_dim,).
+            Normalized state vector of shape (28,).
         """
-        state = []
+        approaches_data = {}
 
-        # Queue lengths per approach (normalized by max ~50 vehicles)
-        max_queue = 50.0
         for direction in ["north", "south", "east", "west"]:
             edge = self.incoming_edges[direction]
-            queue = traci.edge.getLastStepHaltingNumber(edge)
-            state.append(min(queue / max_queue, 1.0))
+            
+            queue_len = traci.edge.getLastStepHaltingNumber(edge)
+            wait_time = traci.edge.getWaitingTime(edge)
+            occupancy = traci.edge.getLastStepOccupancy(edge) * 100.0  # %
+            flow = traci.edge.getLastStepVehicleNumber(edge) * 3600.0 / max(1.0, self.delta_time)
+            speed = traci.edge.getLastStepMeanSpeed(edge) * 3.6  # m/s to km/h
 
-        # Average waiting times per approach (normalized by max ~200s)
-        max_wait = 200.0
-        for direction in ["north", "south", "east", "west"]:
-            edge = self.incoming_edges[direction]
-            wait = traci.edge.getWaitingTime(edge)
-            state.append(min(wait / max_wait, 1.0))
+            # Dummy object since HybridStateBuilder expects object with attributes
+            class _ApproachStats:
+                def __init__(self, q, w, o, f, s):
+                    self.queue_length = q
+                    self.wait_time = w
+                    self.occupancy_pct = o
+                    self.flow_veh_h = f
+                    self.speed_kmh = s
+            
+            approaches_data[direction] = _ApproachStats(queue_len, wait_time, occupancy, flow, speed)
 
-        # Current phase one-hot encoding
-        phase_onehot = [0.0] * (self.num_green_phases + 2)
-        if self._is_yellow:
-            phase_onehot[self.num_green_phases + (self._current_phase_idx % 2)] = 1.0
-        else:
-            phase_onehot[self._current_phase_idx] = 1.0
-        state.extend(phase_onehot)
+        # Get anomaly scores from ARGUS engine if present
+        anomalies = []
+        if self.argus_engine:
+            anomaly_score = self.argus_engine.get_current_anomaly()
+            # Assign global score to all lanes for now
+            for direction in ["north", "south", "east", "west"]:
+                anomalies.append({
+                    "lane": direction,
+                    "severity": anomaly_score
+                })
 
-        # Time since last phase change (normalized by max_green)
-        state.append(min(self._time_since_change / self.max_green, 1.0))
+        # Fetch ped/emergency 
+        ped_active = len(traci.person.getIDList()) > 0
+        emergency_active = any("emergency" in traci.vehicle.getVehicleClass(v) for v in traci.vehicle.getIDList())
 
-        return np.array(state, dtype=np.float32)
+        hybrid_state = HybridStateBuilder.build_from_telemetry(
+            intersection_id=self.tl_id,
+            approaches=approaches_data,
+            phase_index=self._current_phase_idx + (2 if self._is_yellow else 0),
+            phase_name=f"Phase_{self._current_phase_idx}_{'Y' if self._is_yellow else 'G'}",
+            elapsed_s=self._time_since_change,
+            ped_active=ped_active,
+            emergency_active=emergency_active,
+            anomalies=anomalies
+        )
+
+        return RLObservationMapper.to_vector(hybrid_state)
 
     def _compute_reward(self) -> float:
         """
@@ -216,6 +255,13 @@ class SumoEnvironment(gym.Env):
         self._episode_queue_length += total_queue
         self._episode_throughput += throughput
 
+        # Calculate Carbon metrics
+        idle_minutes = total_waiting / 60.0
+        co2_step = idle_minutes * self.carbon_engine.IDLE_CO2_KG_PER_MIN
+        fuel_step = (idle_minutes / 60.0) * self.carbon_engine.FUEL_CONSUMPTION_IDLE_L_HR
+        self._episode_co2_kg += co2_step
+        self._episode_fuel_l += fuel_step
+
         if self.reward_type == "waiting_time":
             # Reward = negative change in waiting time
             reward = self._prev_waiting_time - total_waiting
@@ -225,12 +271,30 @@ class SumoEnvironment(gym.Env):
             # Reward = negative queue length
             reward = -total_queue / 50.0
 
+        elif self.reward_type == "carbon_combined":
+            # Weighted combination with carbon constraint
+            wait_penalty = -total_waiting / 200.0
+            queue_penalty = -total_queue / 50.0
+            throughput_bonus = throughput / 10.0
+            carbon_penalty = -co2_step * self.carbon_weight
+            reward = 0.5 * wait_penalty + 0.3 * queue_penalty + 0.2 * throughput_bonus + 0.1 * carbon_penalty
+            
+            self._episode_wait_reward += (0.5 * wait_penalty)
+            self._episode_queue_reward += (0.3 * queue_penalty)
+            self._episode_throughput_reward += (0.2 * throughput_bonus)
+            self._episode_carbon_reward += (0.1 * carbon_penalty)
+
         else:  # combined
-            # Weighted combination
+            # Standard Weighted combination
             wait_penalty = -total_waiting / 200.0
             queue_penalty = -total_queue / 50.0
             throughput_bonus = throughput / 10.0
             reward = 0.5 * wait_penalty + 0.3 * queue_penalty + 0.2 * throughput_bonus
+            
+            self._episode_wait_reward += (0.5 * wait_penalty)
+            self._episode_queue_reward += (0.3 * queue_penalty)
+            self._episode_throughput_reward += (0.2 * throughput_bonus)
+            self._episode_carbon_reward += 0.0
 
         return float(reward)
 
@@ -298,6 +362,12 @@ class SumoEnvironment(gym.Env):
         self._episode_rewards = 0.0
         self._prev_waiting_time = 0.0
         self._phase_changes = 0
+        self._episode_co2_kg = 0.0
+        self._episode_fuel_l = 0.0
+        self._episode_wait_reward = 0.0
+        self._episode_queue_reward = 0.0
+        self._episode_throughput_reward = 0.0
+        self._episode_carbon_reward = 0.0
 
         # Set initial phase
         traci.trafficlight.setPhase(self.tl_id, self.green_phases[0])
@@ -328,6 +398,10 @@ class SumoEnvironment(gym.Env):
             traci.simulationStep()
             self._step_count += 1
             self._time_since_change += 1
+            
+        # Step ARGUS perception pipeline
+        if self.argus_engine:
+            self.argus_engine.step()
 
         # Compute reward
         reward = self._compute_reward()
@@ -362,6 +436,12 @@ class SumoEnvironment(gym.Env):
                 "throughput": self._episode_throughput,
                 "total_reward": self._episode_rewards,
                 "phase_changes": self._phase_changes,
+                "co2_kg": self._episode_co2_kg,
+                "fuel_l": self._episode_fuel_l,
+                "wait_reward": self._episode_wait_reward,
+                "queue_reward": self._episode_queue_reward,
+                "throughput_reward": self._episode_throughput_reward,
+                "carbon_reward": self._episode_carbon_reward,
             }
 
         return obs, reward, terminated, truncated, info
@@ -396,6 +476,12 @@ class SumoEnvironment(gym.Env):
             "throughput": self._episode_throughput,
             "total_reward": self._episode_rewards,
             "phase_changes": self._phase_changes,
+            "co2_kg": self._episode_co2_kg,
+            "fuel_l": self._episode_fuel_l,
+            "wait_reward": self._episode_wait_reward,
+            "queue_reward": self._episode_queue_reward,
+            "throughput_reward": self._episode_throughput_reward,
+            "carbon_reward": self._episode_carbon_reward,
         }
 
 

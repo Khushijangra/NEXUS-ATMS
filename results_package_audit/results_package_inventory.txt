@@ -1,0 +1,134 @@
+RESULTS PACKAGE INVENTORY
+
+total_files: 21
+total_csv: 10
+total_json: 5
+total_png: 5
+total_other: 1
+
+filename: ablation.csv
+extension: .csv
+file size: 638
+creation timestamp: 1783054474.383085
+modification timestamp: 1783054474.383085
+--------------------
+filename: anomaly_distribution.json
+extension: .json
+file size: 3015
+creation timestamp: 1783054474.2450843
+modification timestamp: 1783054474.2470617
+--------------------
+filename: anomaly_scores.csv
+extension: .csv
+file size: 10035
+creation timestamp: 1783054474.2262108
+modification timestamp: 1783054474.2275136
+--------------------
+filename: benchmark_distribution.csv
+extension: .csv
+file size: 23540
+creation timestamp: 1783054474.305167
+modification timestamp: 1783054474.3061383
+--------------------
+filename: benchmark_metrics.json
+extension: .json
+file size: 391
+creation timestamp: 1783054474.2821307
+modification timestamp: 1783054474.283131
+--------------------
+filename: dataset_audit.json
+extension: .json
+file size: 331
+creation timestamp: 1783054474.144289
+modification timestamp: 1783054474.144289
+--------------------
+filename: feature_distribution.csv
+extension: .csv
+file size: 415
+creation timestamp: 1783054474.182057
+modification timestamp: 1783054474.183064
+--------------------
+filename: feature_pca.json
+extension: .json
+file size: 3079
+creation timestamp: 1783054474.202592
+modification timestamp: 1783054474.202592
+--------------------
+filename: feature_statistics.csv
+extension: .csv
+file size: 8840
+creation timestamp: 1783054474.1645896
+modification timestamp: 1783054474.1645896
+--------------------
+filename: fig_ablation.png
+extension: .png
+file size: 16703
+creation timestamp: 1783054478.3379989
+modification timestamp: 1783054478.418705
+--------------------
+filename: fig_anomaly_hist.png
+extension: .png
+file size: 19322
+creation timestamp: 1783054477.250761
+modification timestamp: 1783054477.3041387
+--------------------
+filename: fig_feature_pca.png
+extension: .png
+file size: 28427
+creation timestamp: 1783054476.7991242
+modification timestamp: 1783054476.8279765
+--------------------
+filename: fig_latency.png
+extension: .png
+file size: 28220
+creation timestamp: 1783054477.981897
+modification timestamp: 1783054478.068981
+--------------------
+filename: fig_reward_curve.png
+extension: .png
+file size: 30736
+creation timestamp: 1783054477.6059923
+modification timestamp: 1783054477.6965022
+--------------------
+filename: numerical_consistency.json
+extension: .json
+file size: 200
+creation timestamp: 1783054474.2643604
+modification timestamp: 1783054474.2643604
+--------------------
+filename: queue.csv
+extension: .csv
+file size: 63
+creation timestamp: 1783054474.3619926
+modification timestamp: 1783054474.362995
+--------------------
+filename: results_and_analysis_chapter.md
+extension: .md
+file size: 5156
+creation timestamp: 1783054550.7500398
+modification timestamp: 1783054550.751491
+--------------------
+filename: rewards.csv
+extension: .csv
+file size: 128
+creation timestamp: 1783054474.3244417
+modification timestamp: 1783054474.325491
+--------------------
+filename: statistical_analysis.csv
+extension: .csv
+file size: 717
+creation timestamp: 1783054474.40256
+modification timestamp: 1783054474.40256
+--------------------
+filename: throughput.csv
+extension: .csv
+file size: 61
+creation timestamp: 1783054474.379761
+modification timestamp: 1783054474.3808117
+--------------------
+filename: waiting.csv
+extension: .csv
+file size: 63
+creation timestamp: 1783054474.3450296
+modification timestamp: 1783054474.3460314
+--------------------

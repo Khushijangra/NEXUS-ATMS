@@ -1,0 +1,5 @@
+topology,nodes,memory_mb
+1x1,1,0.1
+2x2,4,0.1
+4x4,16,0.1
+8x8,64,0.1

@@ -1,0 +1,11 @@
+name: v3_hpc
+channels:
+  - pytorch
+  - nvidia
+  - defaults
+dependencies:
+  - python=3.11
+  - pytorch=2.5
+  - torchvision
+  - torchaudio
+  - pytorch-cuda=12.4

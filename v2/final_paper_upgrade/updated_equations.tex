@@ -1,0 +1,24 @@
+% Updated Equations for SPGRL
+
+% Semantic Stream
+$$ f_t = \text{VideoMAE}(I_t) $$
+$$ A_s = -\log P(f_t) $$
+
+% Behavioral Stream
+$$ A_b = 0.30z_v + 0.25z_a + 0.20j_t + 0.15H + 0.10W $$
+
+% Traffic Forecasting
+$$ F_t = \text{LSTM}(H_t) $$
+
+% Unified State
+$$ Z_t = [G_t, A_s, A_b, F_t, C_f, C_t, E_t] $$
+
+% Joint Optimization
+$$ L_{total} = L_{PPO} + \lambda_1 L_{LSTM} + \lambda_2 L_{GNN} $$
+
+% Reward Function
+$$ R_t = -\lambda_q Q_t - \lambda_w W_t + \lambda_{th} TH_t - \lambda_c C_t - \lambda_a A_t - \lambda_p P_t + \lambda_e E_t $$
+
+% Optimization Objective
+$$ \max_\theta \mathbb{E} \left[ \sum_t \gamma^t R_t \right] $$
+\text{subject to: } \text{Safe}(a_t, Z_t) = 1

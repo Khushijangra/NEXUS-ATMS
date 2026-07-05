@@ -1,0 +1,4 @@
+Claim,Experiment,Seed,CSV,Figure,Statistical Test
+Carbon Pareto Optimality,Experiment B,42,carbon_ablation.csv,Fig2,Shapiro/Welch
+Fusion F1 Dominance,Experiment D,42,experiment_D_results.csv,Fig6,Mann-Whitney
+Emergency Clearance,Experiment E,42,experiment_E_results.csv,Fig9,Cohen d

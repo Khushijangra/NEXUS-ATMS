@@ -142,6 +142,7 @@ class TrafficEnvironment(gym.Env):
         self.render_mode = render_mode
         self._sim_hour = sim_start_hour
         self._real_data_cb = use_real_data_callback
+        self.argus_engine = kwargs.get("argus_engine", None)
         self._rng = np.random.default_rng(42)
 
         n_phases = len(self.cfg.phases)
@@ -156,8 +157,6 @@ class TrafficEnvironment(gym.Env):
         self._occ:   Dict[str, float] = {a: 0.0 for a in APPROACHES}
         self._arrivals: Dict[str, float] = {a: 0.0 for a in APPROACHES}
         self._anomaly_severity: Dict[str, float] = {a: 0.0 for a in APPROACHES}
-        self._anomaly_timer: Dict[str, float] = {a: 0.0 for a in APPROACHES}
-        self._anomaly_prob = 0.003  # targeting ~10% active time
         self._anomaly_multiplier = 0.5  # Reduced from 3.0 to ease learning
         
         # Reward tracking for delta metrics
@@ -194,7 +193,6 @@ class TrafficEnvironment(gym.Env):
         self._occ    = {a: 0.0 for a in APPROACHES}
         self._arrivals = {a: 0.0 for a in APPROACHES}
         self._anomaly_severity = {a: 0.0 for a in APPROACHES}
-        self._anomaly_timer = {a: 0.0 for a in APPROACHES}
         self._current_phase = 0
         self._phase_elapsed = 0
         self._step_count = 0
@@ -266,17 +264,15 @@ class TrafficEnvironment(gym.Env):
         total_queue = sum(self._queue.values())
         self._total_delay_s += total_queue * dt
 
-        # --- Anomalies (Stochastic Spawning & Decay) ---
-        for ap in APPROACHES:
-            if self._anomaly_timer[ap] > 0:
-                self._anomaly_timer[ap] -= dt
-                if self._anomaly_timer[ap] <= 0:
-                    self._anomaly_timer[ap] = 0.0
-                    self._anomaly_severity[ap] = 0.0
-            else:
-                if self._rng.random() < self._anomaly_prob:
-                    self._anomaly_severity[ap] = self._rng.uniform(0.5, 1.0)
-                    self._anomaly_timer[ap] = self._rng.uniform(30.0, 120.0)
+        # --- Anomalies (ARGUS Engine Injection) ---
+        if self.argus_engine:
+            self.argus_engine.step()
+            anomaly_score = self.argus_engine.get_current_anomaly()
+            for ap in APPROACHES:
+                self._anomaly_severity[ap] = anomaly_score
+        else:
+            for ap in APPROACHES:
+                self._anomaly_severity[ap] = 0.0
 
         # Emergency / pedestrian stochastic events
         if self._rng.random() < 0.002:
@@ -386,31 +382,36 @@ class TrafficEnvironment(gym.Env):
     # ------------------------------------------------------------------
 
     def _build_obs(self) -> np.ndarray:
-        max_q = self.cfg.lane_length_m / 6.0
-        max_w = 180.0   # seconds
-        obs = []
+        from intelligence.orchestration.hybrid_state import HybridStateBuilder, RLObservationMapper
+        
+        class _MockState:
+            def __init__(self, q, w, occ, arr):
+                self.queue_length = q
+                self.wait_time = w
+                self.occupancy_pct = occ * 100.0
+                self.flow_veh_h = arr * 3600.0
+        
+        apps = {}
+        anomalies = []
         for ap in APPROACHES:
-            obs.append(float(np.clip(self._queue[ap]   / max_q, 0, 1)))
-            obs.append(float(np.clip(self._wait[ap]    / max_w, 0, 1)))
-            obs.append(float(np.clip(self._occ[ap],             0, 1)))
-            obs.append(float(np.clip(self._arrivals[ap]/ 0.5,   0, 1)))
-            obs.append(float(np.clip(self._anomaly_severity[ap], 0, 1)))
-
-        # Phase one-hot
-        n_phases = len(self.cfg.phases)
-        phase_oh = [0.0] * n_phases
-        phase_oh[self._current_phase] = 1.0
-        obs.extend(phase_oh)
-
-        # Phase elapsed (normalised)
-        obs.append(float(np.clip(self._phase_elapsed / 60.0, 0, 1)))
-        # Time of day (normalised)
-        obs.append(float(self._sim_hour / 24.0))
-        # Flags
-        obs.append(float(self._emergency))
-        obs.append(float(self._ped_request))
-
-        return np.array(obs, dtype=np.float32)
+            apps[ap] = _MockState(self._queue[ap], self._wait[ap], self._occ[ap], self._arrivals[ap])
+            if self._anomaly_severity[ap] > 0.0:
+                anomalies.append({"lane": ap, "severity": self._anomaly_severity[ap]})
+                
+        hybrid_state = HybridStateBuilder.build_from_telemetry(
+            intersection_id=self.cfg.intersection_id,
+            approaches=apps,
+            phase_index=self._current_phase,
+            phase_name=self.cfg.phases[self._current_phase].name,
+            elapsed_s=self._phase_elapsed,
+            ped_active=self._ped_request,
+            emergency_active=self._emergency,
+            anomalies=anomalies
+        )
+        # Override time of day in hybrid state to match sim hour for perfect mapper alignment
+        hybrid_state["timestamp_ms"] = int(self._sim_hour * 3600000.0)
+        
+        return RLObservationMapper.to_vector(hybrid_state)
 
     # ------------------------------------------------------------------
     # Info & Render

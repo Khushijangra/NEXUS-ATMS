@@ -1,0 +1,26 @@
+\documentclass{ieeeaccess}
+\begin{document}
+\title{Paper 5}
+\section{Results}
+See Table \ref{tab:stats}.
+\end{document}
+
+\begin{abstract}
+We propose a unified Semantic Predictive Graph Reinforcement Learning framework for sustainable urban traffic control. The framework jointly integrates semantic anomaly perception, behavioral anomaly analysis, predictive traffic forecasting, graph representation learning, carbon-aware optimization, and emergency safety shielding. Extensive experimental evaluation demonstrates statistically significant improvements in efficiency, sustainability, and emergency responsiveness.
+\end{abstract}
+
+$$Z_t = [G_t, A_s, A_b, F_t, C_f, C_t, E_t]$$
+
+$$L_{total} = L_{PPO} + \lambda_1 L_{LSTM} + \lambda_2 L_{GNN}$$
+
+
+\section{Computational Complexity}
+\begin{itemize}
+    \item \textbf{Behavioral anomaly:} $\mathcal{O}(N)$
+    \item \textbf{Emergency routing:} $\mathcal{O}(E + V \log V)$
+    \item \textbf{LSTM:} $\mathcal{O}(W \cdot H)$ per sequence
+    \item \textbf{GNN:} Message passing $\mathcal{O}(|V| + |E|)$
+    \item \textbf{MAPPO:} Actor/Critic $\mathcal{O}(|Z_t| \cdot |A|)$
+    \item \textbf{Unified state construction:} Runtime $\mathcal{O}(|Z_t|)$
+\end{itemize}
+

@@ -1,0 +1,9 @@
+{
+    "iterations": 1000,
+    "l1_drift": 0.0,
+    "l2_drift": 0.0,
+    "cosine_similarity": 1.0,
+    "max_absolute_error": 0.0,
+    "std_deviation": 0.0,
+    "coefficient_of_variation": 0.0
+}

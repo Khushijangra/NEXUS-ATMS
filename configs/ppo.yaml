@@ -1,0 +1,24 @@
+# SPGRL PPO Experiment Configuration
+experiment_name: "ppo_500ep_baseline"
+seed: 42
+episodes: 500
+
+environment:
+  observation_dim: 168
+  action_dim: 4
+  max_steps: 200
+  reward_weights:
+    queue: 1.0
+    delay: 1.0
+    carbon: 1.0
+    emergency: 2.0
+    semantic: 1.0
+
+ppo:
+  learning_rate: 0.0003
+  gamma: 0.99
+  lambda_gae: 0.95
+  clip_epsilon: 0.2
+  entropy_coeff: 0.01
+  batch_size: 64
+  epochs: 10

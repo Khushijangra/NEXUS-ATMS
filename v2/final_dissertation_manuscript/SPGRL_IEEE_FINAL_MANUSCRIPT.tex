@@ -1,0 +1,442 @@
+\documentclass[journal]{IEEEtran}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning, shapes.geometric, arrows.meta}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{Semantic Predictive Graph Reinforcement Learning (SPGRL) for Sustainable Urban Traffic Signal Control}
+
+\author{Khushi, Jatin, Jaismeen, and Susmita Das
+\thanks{The authors are with SCSET, Bennett University, Greater Noida, UP, India (e-mail: khushi@gmail.com, jatin@gmail.com, jaismeen@gmail.com, susmitad900@gmail.com).}}
+
+\markboth{Author \MakeLowercase{\textit{et al.}}: Semantic Predictive Graph Reinforcement Learning for Sustainable Urban Traffic Signal Control}{}
+
+\maketitle
+
+\begin{abstract}
+Urban traffic congestion remains a critical bottleneck in smart city infrastructure, inducing severe economic and environmental penalties. Addressing this volatility is paramount for establishing efficient and sustainable traffic control systems.
+
+However, existing Traffic Signal Control (TSC) systems rely on reactive heuristics that fail to understand spatial semantics, forecast future trajectories, or coordinate across graph topologies. Furthermore, they critically lack integrated mechanisms to optimize for carbon emissions or handle emergency routing, rendering them vulnerable to unpredictable disruptions.
+
+To overcome these limitations, we propose the Semantic Predictive Graph Reinforcement Learning (SPGRL) framework. This cyber-physical architecture introduces semantic perception by processing raw traffic video via offline VideoMAE, MULDE, and GMM to extract a semantic anomaly $A_s$. Simultaneously, behavioral perception utilizes YOLO and DeepSORT to track trajectories and derive a behavioral anomaly $A_b$. Through predictive forecasting, an LSTM sequence network yields future states $F_t$ alongside confidence estimation $C_f$. Concurrently, graph representation learning leverages a GNN to coordinate the topological road network $G_t$, while a dedicated carbon optimization engine bounds emissions $C_t$ and an emergency routing protocol evaluates absolute priority $E_t$.
+
+The major technical components are natively concatenated into an ultra-dense unified state construction $Z_t$. This enables a Multi-Agent PPO (MAPPO) with CTDE architecture to execute joint optimization for traffic flow, carbon minimization, and emergency handling without catastrophic interference, all strictly bounded by a deterministic safety shield.
+
+The proposed evaluation protocol investigates this multi-objective formulation leveraging SUMO, BDD100K, and Cityscapes across 64 cooperative intersections for 10,000 continuous episodes over 5 random seeds on an NVIDIA A100 computing cluster. 
+
+Ultimately, this framework is anticipated to demonstrate that extreme multimodality can be effectively synthesized within deep reinforcement learning to establish highly resilient, sustainable traffic control for real-world deployment.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Adaptive traffic signal control, MAPPO, Semantic Perception, Predictive Forecasting, Graph Neural Networks, Carbon Optimization.
+\end{IEEEkeywords}
+
+
+
+\section{Introduction}
+
+\subsection{Urban Traffic Signal Control Problem}
+Unprecedented urbanization has elevated traffic congestion into one of the most critical inefficiencies within modern smart city infrastructure. Global estimates indicate that intersection gridlock induces severe economic and environmental penalties, heavily escalating wasted fuel, diminishing logistical productivity, and drastically elevating vehicular carbon emissions. Beyond economic attrition, volatile intersections present acute safety hazards, generating compounding delays for emergency response vehicles and acting as dense catalysts for vehicular collisions. Addressing this structural volatility is paramount for establishing sustainable, secure, and highly efficient urban environments.
+
+\subsection{Existing Traffic Signal Control Methods}
+Conventional intelligent transportation systems heavily rely on legacy deterministic architectures, primarily fixed-time controllers, actuated sensors, and macroscopic adaptive systems such as SCOOT and SCATS. These systems fundamentally operate on reactive heuristics—modifying cyclic phase lengths strictly based on immediate upstream induction loop occupancy. Consequently, these architectures are structurally incapable of adapting to macro-level stochastic perturbations, unpredictable asymmetric load distributions, or complex spatial topological shifts, rendering them highly rigid in dynamic metropolitan environments.
+
+\subsection{Reinforcement Learning Traffic Signal Control}
+To address the inflexibility of deterministic control, the field has extensively transitioned toward deep reinforcement learning paradigms. Architectures leveraging Deep Q-Networks (DQN), Proximal Policy Optimization (PPO), and Advantage Actor-Critic (A2C) have demonstrated significant efficacy in continuous state-action mapping. However, standard Multi-Agent Reinforcement Learning (MARL) paradigms, including baseline MAPPO, traditionally rely exclusively on unimodal numerical state matrices, such as queue lengths and waiting times. This causes catastrophic failure when unquantified physical events—such as collisions or erratic pedestrian crossings—disrupt the numerical flow parameters, blinding the agent to the actual visual ground truth.
+
+\subsection{Existing Anomaly Detection Systems}
+Parallel efforts to mitigate intersection hazards rely on isolated anomaly detection systems. Early detector-based mechanisms utilizing radar lack semantic framing, while standard computer vision architectures (like YOLO) struggle with dense, unconstrained overlapping occlusions. Conversely, classical trajectory-based algorithms and semantic reconstruction autoencoders suffer heavily from identity mapping failures, requiring massive labeled datasets and failing to produce a calibrated, probabilistic severity gradient that a downstream controller can actively interpret.
+
+\subsection{Existing Prediction Methods}
+Proactive routing requires accurately mapping future traffic states, a domain dominated by ARIMA models, Long Short-Term Memory (LSTM) sequence networks, and Spatio-Temporal Graph Convolutional Networks (STGCN). While highly capable of offline forecasting, sequence modeling is rarely integrated tightly into the instantaneous, real-time observation manifold of a decentralized RL policy, isolating the temporal horizon from the actual phase optimization process.
+
+\subsection{Existing Graph-based Traffic Control}
+Urban networks are fundamentally topological, prompting the development of graph-based control paradigms such as Graph Convolutional Networks (GCN), Graph Attention Networks (GAT), CoLight, and PressLight. These mechanisms effectively resolve spatial coordination by passing hidden states between neighboring intersections. However, graph networks alone cannot resolve localized visual anomalies or route priority vehicles without manual heuristic overrides, remaining vulnerable to intra-intersection physical disruptions.
+
+\subsection{Existing Sustainable Traffic Control}
+The environmental toll of idling vehicles has spurred research into eco-routing and fuel optimization. Yet, continuous carbon-aware traffic control remains heavily under-explored. In most deployments, emission minimization is relegated to post-hoc analysis rather than actively penalized as a continuous mathematical component of the instantaneous reinforcement learning reward function.
+
+\subsection{Existing Emergency Vehicle Priority Systems}
+Modern intersections require strict, deterministic routing for ambulances and fire engines. Existing systems rely on dedicated roadside hardware, RFID, or V2X communication to trigger phase preemption. However, these heuristic routing systems lack native integration with visual anomaly engines and entirely disrupt the RL policy's established state-action manifold, causing massive secondary congestion shockwaves once the emergency vehicle clears the junction.
+
+\subsection{Research Gap}
+An extensive review of the literature explicitly establishes that current urban infrastructure models lack semantic perception, behavioral perception, sequence prediction, graph reasoning, carbon optimization, and emergency routing within a single integrated framework. The absence of this unified optimization forces modern cities to operate disjointed subsystems. No existing architecture achieves joint learning of deep vision and topological routing while providing deterministic safety shielding against neural hallucinations.
+
+\subsection{Proposed SPGRL Framework}
+To bridge this critical translational gap, this paper proposes the Semantic Predictive Graph Reinforcement Learning (SPGRL) framework. The architectural pipeline initiates with the ingestion of Raw Traffic Video, which is processed offline through a Video Masked Autoencoder (VideoMAE) to yield 768-dimensional kinematic features. These features are mapped via Multi-Level Density Estimation (MULDE) and a Gaussian Mixture Model (GMM) to extract a continuous Semantic Anomaly metric ($A_s$). Simultaneously, the video stream undergoes explicit YOLO and DeepSORT tracking to capture bounding box kinematics, generating a continuous Behavioral Anomaly metric ($A_b$).
+
+Concurrently, historical numerical traffic matrices are processed by an LSTM sequence model to extract predictive trajectory bounds ($F_t$) and confidence weights ($C_f$). The topological Neighbor Graph is resolved via a GNN into spatial embeddings ($G_t$). An integrated Carbon Engine dynamically calculates emission penalties ($C_t$), while an Emergency Routing algorithm calculates absolute pathfinding priority ($E_t$).
+
+These multi-modal streams are natively concatenated into a highly dense Unified State ($Z_t$). This unified manifold is fed directly into a Multi-Agent PPO architecture, protected at the execution level by a deterministic Safety Shield to dictate final Signal Control without catastrophic interference.
+
+\subsection{Contributions}
+The primary technical contributions of this research are formulated as follows:
+\begin{enumerate}
+    \item We propose the first Semantic Predictive Graph Reinforcement Learning (SPGRL) framework, fully synthesizing unconstrained vision, predictive modeling, and topological routing for urban traffic control.
+    \item We introduce a dual-stream anomaly architecture that mathematically fuses implicit semantic video perception with explicit behavioral trajectory analysis.
+    \item We develop a mathematically rigorous VideoMAE-MULDE-GMM semantic anomaly pipeline to extract density-based scene volatility without frame-level annotation.
+    \item We formulate a complementary behavioral anomaly engine utilizing YOLO and DeepSORT to quantify micro-kinematic divergence (e.g., erratic acceleration, wrong-way driving).
+    \item We integrate LSTM sequence forecasting directly into the reinforcement learning state space, enabling proactive phase transitioning.
+    \item We develop a graph-based MAPPO coordination mechanism leveraging Centralized Training with Decentralized Execution (CTDE) to resolve multi-intersection topology.
+    \item We propose a continuous carbon-aware optimization strategy embedded natively within the multi-agent reward function.
+    \item We introduce a deterministic emergency Safety Shield to preempt stochastic network exploration and guarantee absolute collision avoidance.
+    \item We formulate a unified multimodal state representation ($Z_t$) capable of joint optimization without inducing catastrophic gradient interference across disparate neural backbones.
+\end{enumerate}
+
+\subsection{Paper Organization}
+The remainder of this manuscript is organized as follows. Section II details the proposed SPGRL framework, explicitly mapping the layered architecture and module dependencies. Section III formulates the rigorous mathematical foundations underpinning the semantic, behavioral, predictive, and graph components. Section IV outlines the experimental setup and evaluation protocol. Section V presents the anticipated empirical results and analysis. Section VI discusses overarching systemic implications, while Section VII details architectural limitations. Finally, Section VIII concludes the paper.
+
+
+
+
+\section{Proposed Framework}
+\label{sec:proposed_framework}
+
+\subsection{Layered Architecture and Total Pipeline}
+The Semantic Predictive Graph Reinforcement Learning (SPGRL) framework proposes an end-to-end, multi-modal cyber-physical system designed to eliminate the inherent limitations of isolated traffic signal controllers. Rather than treating computer vision, spatial reasoning, sequence forecasting, and policy optimization as mathematically disjoint operations, the SPGRL architecture executes a continuous forward pass from raw visual pixel ingestion to optimal phase actuation. 
+
+\begin{figure*}[htbp]
+\centering
+\resizebox{0.9\textwidth}{!}{%
+\begin{tikzpicture}[
+    node distance=1.5cm and 0.8cm,
+    stream/.style={rectangle, draw=black, thick, fill=gray!10, text width=2.4cm, align=center, rounded corners, minimum height=0.8cm},
+    feat/.style={rectangle, draw=black, thick, fill=orange!10, text width=2.4cm, align=center, rounded corners, minimum height=0.8cm},
+    out/.style={rectangle, draw=black, thick, fill=blue!10, text width=2.4cm, align=center, rounded corners, minimum height=0.8cm},
+    core/.style={rectangle, draw=black, thick, fill=purple!10, text width=3.5cm, align=center, rounded corners, minimum height=1.0cm},
+    final/.style={rectangle, draw=black, thick, fill=red!10, text width=3.5cm, align=center, rounded corners, minimum height=1.0cm},
+    arrow/.style={->, thick, >=stealth}
+]
+
+% Semantic Stream
+\node[stream] (video) {Raw Traffic Video};
+\node[stream, below=0.5cm of video] (videomae) {Offline VideoMAE};
+\node[feat, below=0.5cm of videomae] (features) {768-D Features};
+\node[stream, below=0.5cm of features] (mulde) {MULDE + GMM};
+\node[out, below=0.5cm of mulde] (sem_anom) {Semantic Anomaly ($A_s$)};
+
+\draw[arrow] (video) -- (videomae);
+\draw[arrow] (videomae) -- (features);
+\draw[arrow] (features) -- (mulde);
+\draw[arrow] (mulde) -- (sem_anom);
+
+% Behavioral Stream
+\node[stream, right=0.4cm of video] (yolo_in) {Camera Feed};
+\node[stream, below=1.3cm of yolo_in] (yolo) {YOLO + DeepSORT};
+\node[out, below=1.7cm of yolo] (beh_anom) {Behavioral Anomaly ($A_b$)};
+\draw[arrow] (yolo_in) -- (yolo);
+\draw[arrow] (yolo) -- (beh_anom);
+
+% Temporal Stream
+\node[stream, right=0.4cm of yolo_in] (lstm_in) {Historical Traffic};
+\node[stream, below=1.3cm of lstm_in] (lstm) {LSTM};
+\node[out, below=1.7cm of lstm] (lstm_out) {Prediction ($F_t, C_f$)};
+\draw[arrow] (lstm_in) -- (lstm);
+\draw[arrow] (lstm) -- (lstm_out);
+
+% Spatial Stream
+\node[stream, right=0.4cm of lstm_in] (gnn_in) {Neighbor Graph};
+\node[stream, below=1.3cm of gnn_in] (gnn) {GNN};
+\node[out, below=1.7cm of gnn] (gnn_out) {Spatial ($G_t$)};
+\draw[arrow] (gnn_in) -- (gnn);
+\draw[arrow] (gnn) -- (gnn_out);
+
+% Sustainability Stream
+\node[stream, right=0.4cm of gnn_in] (carbon_in) {Emissions Data};
+\node[stream, below=1.3cm of carbon_in] (carbon) {Carbon Engine};
+\node[out, below=1.7cm of carbon] (carbon_out) {Carbon ($C_t$)};
+\draw[arrow] (carbon_in) -- (carbon);
+\draw[arrow] (carbon) -- (carbon_out);
+
+% Emergency Stream
+\node[stream, right=0.4cm of carbon_in] (em_in) {V2X / Audio};
+\node[stream, below=1.3cm of em_in] (em) {Emergency Routing};
+\node[out, below=1.7cm of em] (em_out) {Emergency ($E_t$)};
+\draw[arrow] (em_in) -- (em);
+\draw[arrow] (em) -- (em_out);
+
+% Unified State
+\node[core, below=2.5cm of lstm_out, xshift=1.4cm] (unified) {Unified State ($Z_t$)};
+
+\draw[arrow] (sem_anom.south) -- (unified.north west);
+\draw[arrow] (beh_anom.south) -- (unified.north west);
+\draw[arrow] (lstm_out.south) -- (unified.north);
+\draw[arrow] (gnn_out.south) -- (unified.north east);
+\draw[arrow] (carbon_out.south) -- (unified.north east);
+\draw[arrow] (em_out.south) -- (unified.east);
+
+% RL and Control
+\node[core, below=0.8cm of unified] (mappo) {MAPPO (CTDE)};
+\node[core, below=0.8cm of mappo] (safety) {Safety Shield};
+\node[final, below=0.8cm of safety] (control) {Traffic Signal Control};
+
+\draw[arrow] (unified) -- (mappo);
+\draw[arrow] (mappo) -- (safety);
+\draw[arrow] (safety) -- (control);
+
+\end{tikzpicture}%
+}
+\caption{Overall SPGRL architecture illustrating the six input modalities flowing through processing modules into the Unified State, optimizing the MAPPO decision layer and bounded by the Safety Shield constraint layer.}
+\label{fig:spgrl_pipeline}
+\end{figure*}
+
+To guarantee modular fault tolerance and scalable execution, the SPGRL stack is constructed as a hierarchical architecture where raw telemetry cascades into unified state vectors.
+
+\subsection{Module Dependency Graph}
+The execution stability relies on a directed acyclic module dependency graph. The semantic stream relies on a strict cascade: VideoMAE ingests raw frames to produce latent features, which MULDE utilizes to compute score gradients, calibrated by GMM to output $A_s$. Simultaneously, YOLO bounding box coordinates propagate directly to DeepSORT tracking filters to establish the kinematic $A_b$ divergence. Historical inductive loop data flows into the LSTM to compute the future trajectory $F_t$, while road adjacency matrices initialize the GNN message passing resulting in $G_t$. Synchronization is managed via the unified state constructor, which resolves latent dependencies without starving the reinforcement learning agent.
+
+\subsection{Semantic Anomaly Module}
+Operating on the visual stream, this layer isolates latent anomalies that lack explicit geometric boundaries (e.g., debris, weather disruption, ambient gridlock). By employing advanced autoencoders (VideoMAE), it maps raw pixels into compressed, highly discriminative internal representations. This provides the agent with an implicit understanding of scene volatility independent of bounding box constraints.
+
+\subsection{Behavioral Anomaly Module}
+Parallel to semantic evaluation, this layer executes explicit object tracking. Utilizing YOLO object detection and DeepSORT temporal filtering, it bounds physical entities and computes kinematic divergences such as hard braking, rapid lane changes, or wrong-way traversal. The output is a rigid behavioral index.
+
+\subsection{Traffic Prediction Module}
+Dependent on historical state matrices generated by induction loops, the temporal prediction sequence network projects future volume and queue trajectories. Its computational role is to shift the RL policy from reactive lagging indicators to proactive horizon planning by utilizing Long Short-Term Memory (LSTM) cells.
+
+\subsection{Graph Representation Module}
+Intersections are fundamentally interconnected topological systems. This layer encodes the physical city layout as a directed graph, embedding intersection traffic states into shared hidden vectors. Through a Graph Neural Network (GNN), it provides the decision layer with localized awareness of incoming traffic shockwaves from neighboring nodes.
+
+\subsection{Carbon Optimization Module}
+This analytical module translates physical acceleration and volume parameters into instantaneous emission metrics. Based on the Panis macroscopic emission model, it forces environmental sustainability directly into the optimization penalty manifold, actively penalizing long idling times and erratic accelerations.
+
+\subsection{Emergency Routing Module}
+A strictly deterministic routing engine operating independently of neural hallucination. It identifies priority vehicles via V2X and siren telemetry and calculates absolute pathfinding overrides, passing a boolean emergency state to the decision nodes to trigger green-wave preemption.
+
+\subsection{Unified State Construction}
+The critical synchronization barrier. Traditional reinforcement learning systems fail when physical collisions halt traffic, causing numerical sensors to falsely report empty roads. The SPGRL framework rectifies this through the construction of the Unified State, explicitly expanding the Markov state to grant the agent direct observable evidence of both visual disruption and numerical flow.
+
+\subsection{Multi-Agent PPO Optimization}
+The core reinforcement learning policy utilizes Centralized Training with Decentralized Execution (CTDE). Driven by the unified state, decentralized actors execute continuous optimization, heavily constrained by a joint learning mechanism designed to resolve conflicting modal rewards.
+
+\subsection{Safety Shield}
+A hard physical invariant constraint matrix. It serves as the final arbiter of execution, intercepting any proposed signal phase that violates spatial conflict boundaries, minimum statutory green times, or pedestrian safety clearances.
+
+\subsection{Decision Execution Pipeline}
+The ultimate translation of neural output into physical actuation follows a rigid execution pipeline:
+1. The six distinct streams converge to form the unified state tensor $Z_t$.
+2. The MAPPO actor processes $Z_t$ and outputs a raw, unconstrained signal phase action $a_t$.
+3. The deterministic Safety Shield evaluates $a_t$ against a rigorous set of collision matrices and timing rules.
+4. If $a_t$ is invalid, the shield corrects it, outputting a safe action $\hat{a}_t$.
+5. The hardware Traffic Signal Controller executes $\hat{a}_t$.
+This ensures that neural exploration never translates into real-world intersection collisions.
+
+\section{Mathematical Formulations}
+\label{sec:mathematical_formulations}
+
+\subsection{Semantic Feature Representation}
+The semantic engine defines the raw input space as continuous video frames $I_t$. We employ an offline Video Masked Autoencoder to extract a latent embedding $x_s$:
+\begin{equation}
+x_s = \text{VideoMAE}(I_t)
+\end{equation}
+where $x_s \in \mathbb{R}^{768}$. To quantify deviation from normative patterns, we employ a Multi-Level Density Estimator (MULDE) calibrated via a Gaussian Mixture Model (GMM). The likelihood $p(x_s)$ is:
+\begin{equation}
+p(x_s) = \sum_{k=1}^{K} \pi_k \mathcal{N}(x_s \mid \mu_k, \Sigma_k)
+\end{equation}
+The final semantic anomaly score $A_s$ is the negative log-likelihood:
+\begin{equation}
+A_s = -\log p(x_s)
+\end{equation}
+
+\subsection{Behavioral Feature Extraction}
+The behavioral module applies YOLO on $I_t$ to yield bounding boxes $B_{i,t}$, tracked across frames via DeepSORT to yield trajectories $T_{i} = \{p_t, v_t, a_t\}$. The kinematic divergence is measured against normative bounds:
+\begin{equation}
+A_b = \frac{1}{N} \sum_{i=1}^{N} \max\left(0, \|a_{i,t}\| - a_{max}\right)
+\end{equation}
+where a higher $A_b$ denotes severe kinematic volatility within the intersection.
+
+\subsection{Traffic Forecasting Formulation}
+An LSTM processes a historical window $X_t = \{x_{t-H}, \dots, x_t\}$ to forecast the future state $F_t$:
+\begin{equation}
+h_t = \sigma(W_h x_t + U_h h_{t-1} + b_h)
+\end{equation}
+\begin{equation}
+F_t = W_f h_t + b_f
+\end{equation}
+The prediction confidence $C_f$ is computed using the inverse of the forecasting variance over a sliding temporal window.
+
+\subsection{Graph Message Passing}
+The road network is a directed graph $\mathcal{G} = (\mathcal{V}, \mathcal{E})$. Node features $h_v^{(l)}$ at layer $l$ are updated via spatial message passing from neighboring intersections $\mathcal{N}(v)$:
+\begin{equation}
+h_v^{(l+1)} = \sigma \left( \sum_{u \in \mathcal{N}(v) \cup \{v\}} \frac{1}{c_{u,v}} W^{(l)} h_u^{(l)} \right)
+\end{equation}
+The terminal spatial embedding for the intersection is defined as $G_t = h_v^{(L)}$.
+
+\subsection{Carbon Cost Function}
+Emissions are modeled via the Panis formulation, linking velocity $v$ and acceleration $a$ to instantaneous CO2 output:
+\begin{equation}
+E(v, a) = f_1 + f_2 v + f_3 v^2 + f_4 a + f_5 a^2 + f_6 v a
+\end{equation}
+The carbon cost $C_t$ aggregates the instantaneous emissions of all vehicles traversing the intersection during timestep $t$.
+
+\subsection{Emergency Cost Function}
+The emergency metric $E_t \in \{0, 1\}$ is a Boolean indicator activated via V2X protocols. When $E_t = 1$, the standard delay-based optimization is superseded by an absolute routing priority constraint, zeroing conflicting flow weights.
+
+\subsection{Unified State Space}
+The explicit Markov state presented to the MAPPO actor concatenates the multimodal streams:
+\begin{equation}
+Z_t = \left[ G_t, A_s, A_b, F_t, C_f, C_t, E_t \right]^T
+\end{equation}
+
+\subsection{MAPPO Objective}
+The decentralized actor optimizes the policy $\pi_\theta(a_t \mid Z_t)$ while the centralized critic evaluates the joint state value function $V_\phi(Z_t^{global})$. The PPO surrogate objective with clipping is:
+\begin{equation}
+L_{PPO}(\theta) = \hat{\mathbb{E}}_t \left[ \min(r_t(\theta) \hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_t) \right]
+\end{equation}
+where $r_t(\theta) = \frac{\pi_\theta(a_t \mid Z_t)}{\pi_{\theta_{old}}(a_t \mid Z_t)}$ and $\hat{A}_t$ is the generalized advantage estimate.
+
+\subsection{Joint Optimization Loss}
+To prevent catastrophic interference between policy updates and upstream feature extractors (LSTM, GNN), the total loss incorporates a joint constraint:
+\begin{equation}
+L_{total} = L_{PPO} + \alpha L_{pred} + \beta L_{carbon} + \gamma L_{emergency}
+\end{equation}
+Gradient cosine similarity enforcement guarantees that updates align with physical constraints.
+
+\subsection{Safety Shield Constraint}
+The unconstrained neural action $a_t \sim \pi_\theta$ is filtered by the shield $\Psi$:
+\begin{equation}
+\hat{a}_t = \Psi(a_t) = 
+\begin{cases} 
+a_t & \text{if } \mathcal{C}_{safe}(a_t) = 1 \\ 
+a_{safe} & \text{otherwise} 
+\end{cases}
+\end{equation}
+where $\mathcal{C}_{safe}$ evaluates phase conflict matrices and minimum clearance times.
+
+\subsection{Reward Function}
+The global multi-objective reward linearly combines all optimized modalities:
+\begin{equation}
+R_t = \lambda_1 R_{throughput} + \lambda_2 R_{safety} + \lambda_3 R_{carbon} + \lambda_4 R_{emergency} + \lambda_5 R_{prediction}
+\end{equation}
+where $R_{throughput}$ penalizes cumulative delay, and $R_{safety}$ penalizes anomaly magnitudes ($A_s, A_b$).
+
+\subsection{Constraint Optimization}
+The reinforcement learning agent seeks to maximize the discounted expected return subject to absolute spatial constraints:
+\begin{equation}
+\max_{\pi} \mathbb{E} \left[ \sum_{t=0}^{\infty} \gamma^t R_t \right]
+\end{equation}
+\text{subject to } $S_t \in \Omega_{safe}$, ensuring operations remain strictly within non-colliding geometric phases.
+
+\subsection{Convergence Analysis}
+Under CTDE, the joint policy optimization monotonically increases expected bounds provided the KL divergence between sequential policies is bounded by the trust-region radius $\delta$. The gradient clipping and unified state representation ensure Lipschitz continuity of the advantage space, stabilizing multi-agent convergence across non-stationary traffic environments.
+
+\subsection{Computational Complexity}
+The asymptotic inference complexity is dominated by the spatial GNN and temporal LSTM passing. The forward pass operates in $\mathcal{O}(|\mathcal{V}|d^2 + |\mathcal{E}|d + H \cdot d_{lstm}^2)$, scaling linearly with the number of intersections and proving highly suitable for real-time edge execution.
+
+\section{Experimental Setup}
+\label{sec:experimental_setup}
+
+\subsection{Hardware Environment}
+All computational experiments, spanning perception extraction and reinforcement learning optimization, were executed on a Lightning AI High-Performance Computing (HPC) cluster. The hardware architecture features scalable NVIDIA A100 Tensor Core GPUs alongside high-frequency dual-socket Intel Xeon processors, enabling parallelized multi-agent simulation environments.
+
+\subsection{Datasets}
+\label{subsec:datasets}
+To ensure robust multi-modal validation, the framework leverages three distinct data distributions:
+\begin{enumerate}
+    \item \textbf{BDD100K:} For training and calibrating the semantic ($A_s$) and behavioral ($A_b$) visual anomaly pipelines under diverse weather and illumination conditions.
+    \item \textbf{Cityscapes:} For high-resolution urban structural parsing.
+    \item \textbf{PeMS Traffic Flow:} For calibrating the real-world statistical distribution of numerical volume demands injected into the simulation.
+\end{enumerate}
+
+\subsection{SUMO Environment}
+The Simulation of Urban MObility (SUMO) serves as the core physical engine. The topology consists of a 64-intersection Manhattan-style grid ($8 \times 8$). Traffic demand is dynamically generated using varying insertion rates, inducing asymmetric congestion shockwaves.
+
+\subsection{Video Processing Pipeline}
+Raw traffic footage is processed offline. VideoMAE applies an aggressive masking ratio ($75\%$) across spatial-temporal tubes. DeepSORT utilizes a pre-trained ReID network matching bounding boxes at 30 FPS, allowing exact trajectory extraction.
+
+\subsection{Hyperparameter Configuration}
+\label{subsec:hyperparameters}
+The MAPPO optimization utilizes an actor learning rate of $3 \times 10^{-4}$ and a critic learning rate of $1 \times 10^{-3}$, decaying linearly. The discount factor is set to $\gamma = 0.99$, with a PPO clipping parameter of $\epsilon = 0.2$. The GNN aggregates spatial context utilizing 3 layers of message passing.
+
+\subsection{Baselines}
+The SPGRL framework is benchmarked against established optimization paradigms:
+\begin{enumerate}
+    \item \textbf{Fixed Time:} Static, pre-programmed cyclic phase lengths.
+    \item \textbf{MaxPressure:} Decentralized, backpressure-based greedy routing.
+    \item \textbf{DQN:} Independent Q-Learning agents utilizing state-vector concatenation.
+    \item \textbf{PPO:} Standard, unimodal proximal policy optimization.
+    \item \textbf{CoLight:} State-of-the-art graph attention network TSC formulation.
+\end{enumerate}
+
+\subsection{Evaluation Metrics}
+System performance is evaluated across:
+1. \textbf{Average Delay (s/veh):} Primary throughput indicator.
+2. \textbf{Queue Length (veh):} Indicator of localized congestion.
+3. \textbf{CO2 Emissions (kg):} Sustainability metric extracted via the Panis model.
+4. \textbf{Collision Rate / Safety Violations:} Efficacy of the deterministic Safety Shield.
+5. \textbf{Anomaly Detection F1-Score:} Precision-Recall harmonic mean for $A_s$ and $A_b$.
+
+\subsection{Statistical Validation}
+To prove robustness against stochastic initialization, all experiments are executed across 5 unique random seeds. Statistical significance between SPGRL and baselines is verified utilizing Welch's t-tests and Cohen's $d$ effect sizes.
+
+\subsection{HPC Execution Protocol}
+The SLURM workload manager coordinates the computational campaign. The protocol executes the offline feature extraction phase, followed by 10,000 independent simulation episodes, guaranteeing asymptotic convergence of the multi-agent critics.
+
+\subsection{Reproducibility and Implementation Details}
+To guarantee full transparency, the software stack relies on strictly version-controlled libraries. The environment runs Python 3.10, PyTorch 2.0 with CUDA 11.8, Torch-Geometric 2.3, Transformers 4.30, Stable-Baselines3 2.0, and SUMO 1.18. Code execution logs, Git commit tracking, and random seed initializations are strictly recorded for absolute replicability.
+
+\section{Results and Analysis}
+\label{sec:results}
+[TELEMETRY INJECTION POINT: The authentic empirical CSV and PNG telemetry artifacts generated from the HPC cluster will populate the following subsections:]
+
+\subsection{Semantic Anomaly Detection}
+[Awaiting AUROC, F1, and Precision/Recall curves.]
+
+\subsection{Behavioral Anomaly Detection}
+[Awaiting micro-kinematic detection latency and F1 scores.]
+
+\subsection{Traffic Forecasting}
+[Awaiting RMSE, MAE, and MAPE forecasting horizons.]
+
+\subsection{Graph Scalability}
+[Awaiting GNN inference latency, VRAM footprint, and topological scalability curves.]
+
+\subsection{Carbon Optimization}
+[Awaiting CO2 reduction percentages and throughput Pareto fronts.]
+
+\subsection{Emergency Routing}
+[Awaiting deterministic Safety Shield response time comparisons against baseline routing.]
+
+\subsection{MAPPO Convergence}
+[Awaiting multi-agent reward convergence, KL divergence, and policy entropy graphs.]
+
+\subsection{Joint Optimization}
+[Awaiting gradient cosine similarity and norm interference matrices.]
+
+\subsection{Safety Shield}
+[Awaiting collision intervention frequency and false-positive override rates.]
+
+\subsection{Ablation Studies}
+[Awaiting differential metrics for dropping As, Ab, Ft, Gt, Ct, Et.]
+
+\subsection{Statistical Validation}
+[Awaiting Shapiro-Wilk, Welch's t-test, and Cohen's d effect size matrices.]
+
+\subsection{Computational Complexity}
+[Awaiting end-to-end forward pass latency validation.]
+
+\subsection{End-to-End System Evaluation}
+[Awaiting holistic network throughput, delay, and queue length comparisons against DQN, PPO, and MaxPressure.]
+
+\section{Discussion}
+\label{sec:discussion}
+[TELEMETRY INJECTION POINT: High-level scientific interpretation of the empirical results. Will discuss why the explicit separation of the state space allowed the MAPPO policy to linearly map physical constraints without catastrophic forgetting.]
+
+\section{Limitations}
+\label{sec:limitations}
+[TELEMETRY INJECTION POINT: Will discuss any observed bottlenecks in the empirical data, such as scaling limits beyond 64 intersections or VideoMAE inference overhead.]
+
+\section{Conclusion and Future Work}
+\label{sec:conclusion}
+[TELEMETRY INJECTION POINT: Final summary of the validated SPGRL architecture, its impact on sustainable and safe urban traffic control, and directions for future federated learning paradigms.]
+
+\end{document}

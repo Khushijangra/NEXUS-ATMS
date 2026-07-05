@@ -1,0 +1,157 @@
+import os
+from pathlib import Path
+
+def generate_section4():
+    sec4_tex = r"""
+\section{Mathematical Formulations}
+\label{sec:mathematical_formulations}
+
+\subsection{Semantic Anomaly Formulation}
+The semantic anomaly engine operates strictly on unconstrained visual data to capture macroscopic scene volatility. We define the raw input space as continuous video frames $x_t \in \mathbb{R}^{C \times H \times W}$. Rather than utilizing bounding box heuristics, we employ an offline Video Masked Autoencoder (VideoMAE) to extract a highly discriminative latent embedding $v_t$:
+\begin{equation}
+v_t = f_{VideoMAE}(x_t)
+\end{equation}
+where $v_t \in \mathbb{R}^{768}$ captures the dense spatio-temporal kinematics of the intersection over a sliding 16-frame window. To quantify the deviation of this embedding from normative traffic patterns, we employ a Multi-Level Density Estimator (MULDE). The local density $D(v_t)$ is approximated via Denoising Score Matching. This density is calibrated into a continuous probability distribution utilizing a Gaussian Mixture Model (GMM). The likelihood $P(v_t)$ is defined as:
+\begin{equation}
+P(v_t) = \sum_{k=1}^{K} \pi_k \mathcal{N}(v_t \mid \mu_k, \Sigma_k)
+\end{equation}
+where $K$ represents the number of mixture components, $\pi_k$ denotes the mixing coefficient, and $\mathcal{N}$ is the multivariate normal distribution parameterized by mean $\mu_k$ and covariance $\Sigma_k$. The final semantic anomaly score $A_s$ is extracted as the negative log-likelihood of the embedding:
+\begin{equation}
+A_s = -\log(P(v_t))
+\end{equation}
+A higher $A_s$ value explicitly correlates to severe, out-of-distribution physical anomalies, such as catastrophic debris or unconstrained pedestrian clustering.
+
+\subsection{Behavioral Anomaly Formulation}
+Complementing the implicit semantic analysis, the behavioral anomaly engine explicitly tracks individual vehicular micro-kinematics. Using YOLO object detection coupled with DeepSORT filtering, we extract the precise trajectory of the $i$-th vehicle over a temporal horizon:
+\begin{equation}
+\tau_i = (x_i, y_i, v_i, a_i, j_i)
+\end{equation}
+where $(x_i, y_i)$ denote the spatial coordinates, $v_i$ is instantaneous velocity, $a_i$ is acceleration, and $j_i$ represents the jerk (derivative of acceleration). The aggregate behavioral anomaly $A_b$ over the intersection is computed as a weighted linear combination of kinematic divergences:
+\begin{equation}
+A_b = 0.30z_v + 0.25z_a + 0.20j_t + 0.15H + 0.10W
+\end{equation}
+where $z_v$ and $z_a$ represent the normalized Z-scores of speed and acceleration deviation relative to historical baselines, $j_t$ bounds extreme braking events, $H$ denotes the spatial entropy indicating chaotic vehicular dispersion, and $W$ serves as a binary wrong-way trajectory penalty.
+
+\subsection{Traffic Prediction Formulation}
+To transition the system from reactive lagging control to proactive planning, short-term temporal forecasting is tightly integrated. The historical numerical traffic state $H_t$ over a time window $W$ is defined as:
+\begin{equation}
+H_t = \{s_{t-W}, \dots, s_t\}
+\end{equation}
+This historical matrix is ingested by a Long Short-Term Memory (LSTM) sequence network to map future trajectory distributions:
+\begin{equation}
+F_t = f_{LSTM}(H_t)
+\end{equation}
+where $F_t$ bounds the predicted volume and queue lengths. Because neural forecasting is inherently stochastic during anomalies, we explicitly formulate a prediction confidence score $C_f$ based on the variance $\sigma(F_t)$ of Monte Carlo dropout bounds:
+\begin{equation}
+C_f = 1 - \frac{\sigma(F_t)}{\max(\sigma)}
+\end{equation}
+This uncertainty estimation dictates whether the downstream reinforcement learning policy should heavily weight the temporal horizon or revert to instantaneous observation.
+
+\subsection{Graph Representation Formulation}
+The physical urban network is topologically structured as a directed graph $\mathcal{G} = (\mathcal{V}, \mathcal{E})$, where $\mathcal{V}$ defines intersections (nodes) and $\mathcal{E}$ defines connecting arterial roads (edges). The hidden state of each intersection is recursively updated via Graph Convolutional Networks (GCN) to pass shockwave matrices between neighbors:
+\begin{equation}
+H^{(l+1)} = \sigma\left( \hat{D}^{-1/2}\hat{A}\hat{D}^{-1/2}H^{(l)}W^{(l)} \right)
+\end{equation}
+where $\hat{A}$ represents the adjacency matrix with self-connections, $\hat{D}$ is the diagonal degree matrix, $H^{(l)}$ is the feature representation at layer $l$, and $W^{(l)}$ is the learnable weight tensor. To capture asymmetric traffic flows, a Graph Attention Network (GAT) computes normalized attention coefficients:
+\begin{equation}
+\alpha_{ij} = \frac{\exp(e_{ij})}{\sum_{k \in \mathcal{N}_i} \exp(e_{ik})}
+\end{equation}
+where $e_{ij}$ represents the raw attention score between node $i$ and node $j$. The final aggregated spatial message constitutes the graph embedding $G_t$.
+
+\subsection{Carbon Formulation}
+Optimizing strictly for vehicle throughput ignores the massive environmental externalities of intersection idling. The Carbon Engine translates physical kinematics into continuous emission penalties. Total intersection emissions $C_t$ are modeled aggregating the carbon footprint of all $i$ vehicles:
+\begin{equation}
+C_t = \sum_i f(v_i, a_i)
+\end{equation}
+where $f(v_i, a_i)$ utilizes the Panis empirical emission model, mapping instantaneous velocity and acceleration to $CO_2$ dispersion rates in grams per second. This directly imposes a continuous carbon penalty:
+\begin{equation}
+R_c = -\lambda_c C_t
+\end{equation}
+
+\subsection{Emergency Routing Formulation}
+Emergency preemption supersedes all stochastic optimization. Given the arterial sub-graph $\mathcal{G}_r = (\mathcal{V}, \mathcal{E})$, the optimal emergency routing path $P^*$ minimizes total traversal delay:
+\begin{equation}
+P^* = \text{argmin}_{P} \sum_{e \in P} w(e)
+\end{equation}
+where $w(e)$ dynamically factors real-time congestion. The module outputs an emergency priority vector $E_t$, represented as a binary boolean matrix indicating incoming priority vehicles. The pathfinding protocol operates completely outside the neural network loop, guaranteeing a deterministic complexity of $\mathcal{O}(|E| + |V| \log |V|)$ utilizing Dijkstra's algorithm.
+
+\subsection{Unified State Construction}
+The individual observation modalities are fused into the Unified State vector $Z_t$:
+\begin{equation}
+Z_t = [G_t, A_s, A_b, F_t, C_f, C_t, E_t]
+\end{equation}
+This state construction inherently prevents catastrophic dimension mismatch by applying Layer Normalization across the highly dense concatenated array. By binding semantic perception directly to graph embeddings and predictive confidence, the asynchronous neural streams are rigorously synchronized. The resulting $Z_t$ serves as the sole authoritative Markov state presented to the decision policy.
+
+\subsection{MAPPO Formulation}
+The control layer utilizes Multi-Agent Proximal Policy Optimization (MAPPO), structured around the Centralized Training with Decentralized Execution (CTDE) paradigm. The decentralized actor policy $\pi(a \mid Z_t)$ outputs the optimal signal phase transition probability, while the centralized critic estimates the value function $V(Z_{global})$ leveraging the global joint state. The temporal difference error yields the advantage estimator $A_t$. The PPO clipping ratio $r_t(\theta)$ is defined as:
+\begin{equation}
+r_t(\theta) = \frac{\pi_\theta(a_t \mid Z_t)}{\pi_{\theta_{old}}(a_t \mid Z_t)}
+\end{equation}
+The actor network minimizes the surrogate clipping objective:
+\begin{equation}
+L_{PPO} = \mathbb{E} \left[ \min(r_t(\theta) A_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) A_t) \right]
+\end{equation}
+where $\epsilon$ defines the hyperparameter trust-region bounds ensuring monotonic policy improvements.
+
+\subsection{Joint Optimization}
+Training the independent GNN, LSTM, and PPO backbones sequentially risks severe distributional shift. The SPGRL framework executes joint optimization to backpropagate unified gradients:
+\begin{equation}
+L_{total} = L_{PPO} + \lambda_1 L_{LSTM} + \lambda_2 L_{GNN}
+\end{equation}
+To explicitly prevent catastrophic interference—where PPO optimization degrades the upstream feature extraction of the LSTM or GNN—we monitor gradient similarity using Cosine proximity:
+\begin{equation}
+\text{Cos}(\theta) = \frac{g_1 \cdot g_2}{||g_1|| \, ||g_2||}
+\end{equation}
+If the cosine similarity drops below a negative threshold, indicating conflicting gradient vectors, gradient projection clipping is applied to orthogonalize the update.
+
+\subsection{Reward Function}
+The holistic reinforcement learning optimization objective is governed by a scalar multi-objective reward function $R_t$:
+\begin{equation}
+R_t = w_1 R_{traffic} + w_2 R_{carbon} + w_3 R_{prediction} + w_4 R_{anomaly} + w_5 R_{emergency}
+\end{equation}
+Here, $R_{traffic}$ penalizes massive queues and vehicle delay, $R_{carbon}$ penalizes excess $C_t$ emissions, $R_{prediction}$ rewards tight variance mapping, $R_{anomaly}$ strictly penalizes routing vehicles into high $A_s$ visual severity zones, and $R_{emergency}$ provides massive sparse rewards for successfully preempting priority corridors. The weights $w_x$ dynamically govern the Pareto optimization front, allowing system operators to balance throughput against environmental and safety constraints.
+
+\subsection{Safety Shield}
+To guarantee fail-safe physical operation, the final action actuation $a_t$ is strictly gated by a deterministic rule-based Safety Shield:
+\begin{equation}
+a_t = 
+\begin{cases} 
+a_{safe} & E_t > 0 \\
+a_{RL} & \text{otherwise} 
+\end{cases}
+\end{equation}
+If an emergency vehicle is detected ($E_t > 0$), the neural policy is wholly bypassed, and the controller executes deterministic green-wave preemption to prevent catastrophic collision and minimize priority delay.
+
+\subsection{Computational Complexity Analysis}
+The bounded complexity of the SPGRL components governs their suitability for real-time inference on edge hardware. The asymptotic time complexities are documented in Table~\ref{tab:complexity}.
+
+\begin{table}[htbp]
+\centering
+\caption{Module Complexity Analysis}
+\label{tab:complexity}
+\begin{tabular}{|l|c|}
+\hline
+\textbf{Module} & \textbf{Complexity} \\
+\hline
+VideoMAE & $\mathcal{O}(TD)$ \\
+MULDE & $\mathcal{O}(N)$ \\
+GMM & $\mathcal{O}(KD)$ \\
+Behavioral Tracking & $\mathcal{O}(N)$ \\
+LSTM Forecasting & $\mathcal{O}(WH)$ \\
+Graph Neural Network & $\mathcal{O}(V+E)$ \\
+Emergency Routing & $\mathcal{O}(E+V\log V)$ \\
+State Fusion & $\mathcal{O}(|Z_t|)$ \\
+MAPPO Inference & $\mathcal{O}(|Z_t||A|)$ \\
+\hline
+\end{tabular}
+\end{table}
+"""
+    
+    project_root = Path(__file__).resolve().parents[0]
+    path = project_root / "v2" / "final_dissertation_manuscript" / "sections" / "04_mathematical_formulations.tex"
+    
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(sec4_tex)
+
+if __name__ == "__main__":
+    generate_section4()

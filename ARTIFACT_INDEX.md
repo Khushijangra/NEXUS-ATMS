@@ -1,0 +1,3 @@
+- v2/results/
+- v2/figures/
+- v2/papers/

@@ -1,0 +1,2 @@
+class TrajectoryDataset:
+    pass

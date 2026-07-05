@@ -1,0 +1,14 @@
+{
+    "total_sequences": 100,
+    "total_feature_vectors": 34703,
+    "feature_dimension": 768,
+    "mean_sequence_length": 347.03,
+    "min_sequence_length": 92,
+    "max_sequence_length": 655,
+    "dtype_distribution": {
+        "float16": 100
+    },
+    "missing_values": 0,
+    "nan_count": 0,
+    "inf_count": 0
+}

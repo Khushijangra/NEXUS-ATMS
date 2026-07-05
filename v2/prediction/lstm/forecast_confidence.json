@@ -1,0 +1,6 @@
+{
+    "Calibration Error (ECE)": 0.30211231112480164,
+    "Negative Log Likelihood (NLL)": 1.8629099130630493,
+    "Prediction Interval Coverage (PICP)": 0.8128563316297558,
+    "Mean Prediction Interval Width (MPIW)": 3.999224901199341
+}

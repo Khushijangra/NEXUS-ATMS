@@ -1,0 +1,11 @@
+{
+    "target_gpu": "NVIDIA A100 80GB",
+    "fallback_gpu": [
+        "H100",
+        "A6000",
+        "V100"
+    ],
+    "cpu_cores": 64,
+    "ram_gb": 512,
+    "storage": "2 TB SSD"
+}
