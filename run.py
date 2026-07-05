@@ -151,7 +151,7 @@ def main():
             if not existing:
                 print("Error: No experiments found to evaluate.")
                 sys.exit(1)
-            latest_exp = sorted(existing, key=lambda x: x.name)[-1]
+            latest_exp = sorted(existing, key=lambda x: x.stat().st_mtime)[-1]
             args.exp_dir = str(latest_exp)
             print(f"Auto-selected latest experiment for evaluation: {args.exp_dir}")
             

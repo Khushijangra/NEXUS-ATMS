@@ -58,7 +58,7 @@ class ExperimentManager:
             existing = [d for d in self.exp_dir_base.iterdir() if d.is_dir() and exp_name_search in d.name and seed_search in d.name]
             if not existing:
                 raise ValueError(f"No experiments found matching seed {seed} to resume!")
-            return sorted(existing, key=lambda x: x.name)[-1]
+            return sorted(existing, key=lambda x: x.stat().st_mtime)[-1]
             
         exp_name = f"{date_str}_{self.exp_base_name}{episodes}_seed{seed}"
         existing = [d for d in self.exp_dir_base.iterdir() if d.is_dir() and exp_name in d.name]
