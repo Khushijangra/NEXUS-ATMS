@@ -51,22 +51,24 @@ class PPOAgent:
         self.eps_clip = eps_clip
         self.K_epochs = K_epochs
         
-        self.actor = Actor(state_dim, action_dim)
-        self.critic = Critic(state_dim)
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        
+        self.actor = Actor(state_dim, action_dim).to(self.device)
+        self.critic = Critic(state_dim).to(self.device)
         
         self.optimizer = optim.Adam([
             {'params': self.actor.parameters(), 'lr': lr_actor},
             {'params': self.critic.parameters(), 'lr': lr_critic}
         ])
         
-        self.policy_old = Actor(state_dim, action_dim)
+        self.policy_old = Actor(state_dim, action_dim).to(self.device)
         self.policy_old.load_state_dict(self.actor.state_dict())
         
         self.MseLoss = nn.MSELoss()
         
     def act(self, state, buffer=None):
         if not isinstance(state, torch.Tensor):
-            state = torch.FloatTensor(state).unsqueeze(0)
+            state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
             
         with torch.no_grad():
             action_probs = self.policy_old(state)
@@ -95,9 +97,9 @@ class PPOAgent:
     def update(self, buffer):
         """PPO update using collected trajectories."""
         # Convert lists to tensors
-        old_states = torch.stack(buffer.states, dim=0).detach()
-        old_actions = torch.stack(buffer.actions, dim=0).detach()
-        old_logprobs = torch.stack(buffer.logprobs, dim=0).detach()
+        old_states = torch.stack(buffer.states, dim=0).detach().to(self.device)
+        old_actions = torch.stack(buffer.actions, dim=0).detach().to(self.device)
+        old_logprobs = torch.stack(buffer.logprobs, dim=0).detach().to(self.device)
         rewards = buffer.rewards
         is_terminals = buffer.is_terminals
         
@@ -111,7 +113,7 @@ class PPOAgent:
             returns.insert(0, discounted_reward)
             
         # Normalizing the returns
-        returns = torch.tensor(returns, dtype=torch.float32)
+        returns = torch.tensor(returns, dtype=torch.float32).to(self.device)
         returns = (returns - returns.mean()) / (returns.std() + 1e-7)
         
         avg_loss = 0
