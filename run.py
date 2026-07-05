@@ -73,7 +73,7 @@ def run_healthcheck():
         agent = PPOAgent(state_dim=168, action_dim=4)
         checks["PPO Loads"] = True
         
-        from v2.rl.safety_wrapper import SafetyWrapper
+        from v2.safety.safety_wrapper import SafetyWrapper
         sw = SafetyWrapper()
         checks["Safety Loads"] = True
     except Exception as e:
