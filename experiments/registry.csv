@@ -7,3 +7,4 @@ ExpID,Date,Name,Seed,Episodes,Status,GitCommit,TorchVersion
 20260705_ppo6_seed42_2,2026-07-05 11:07:21,ppo,42,6,STARTED,8fecdd8,2.6.0+cu124
 20260705_ppo6_seed42_3,2026-07-05 11:12:43,ppo,42,6,STARTED,8fecdd8,2.6.0+cu124
 20260705_ppo6_seed42_4,2026-07-05 11:18:41,ppo,42,6,STARTED,a40b4f0,2.6.0+cu124
+20260705_ppo6_seed42_5,2026-07-05 11:27:29,ppo,42,6,STARTED,b53915c,2.6.0+cu124
