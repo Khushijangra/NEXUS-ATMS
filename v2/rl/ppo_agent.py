@@ -64,22 +64,20 @@ class PPOAgent:
         
         self.MseLoss = nn.MSELoss()
         
-    def act(self, state, buffer):
-        """Select an action during interaction and store to buffer."""
+    def act(self, state, buffer=None):
+        if not isinstance(state, torch.Tensor):
+            state = torch.FloatTensor(state).unsqueeze(0)
+            
         with torch.no_grad():
-            if not isinstance(state, torch.Tensor):
-                state = torch.FloatTensor(state)
-            if state.ndim == 1:
-                state = state.unsqueeze(0)
-                
             action_probs = self.policy_old(state)
             dist = Categorical(action_probs)
             action = dist.sample()
             action_logprob = dist.log_prob(action)
             
-        buffer.states.append(state.squeeze(0))
-        buffer.actions.append(action.squeeze(0))
-        buffer.logprobs.append(action_logprob.squeeze(0))
+        if buffer is not None:
+            buffer.states.append(state.squeeze(0))
+            buffer.actions.append(action.squeeze(0))
+            buffer.logprobs.append(action_logprob.squeeze(0))
             
         return action.item()
         
