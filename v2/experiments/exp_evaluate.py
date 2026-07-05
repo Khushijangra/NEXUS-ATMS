@@ -19,10 +19,14 @@ def run_evaluate(exp_dir: Path, eval_episodes: int = 10):
         return
         
     ckpt_dir = exp_dir / "checkpoints"
+    
     if not ckpt_dir.exists():
         print(f"Error: Checkpoints dir {ckpt_dir} not found.")
         return
         
+    # Find all actor checkpoints
+    ckpts = list(ckpt_dir.glob("*actor.pth"))
+    
     eval_csv = exp_dir / "evaluation_metrics.csv"
     with open(eval_csv, 'w', newline='') as f:
         writer = csv.writer(f)
