@@ -39,13 +39,13 @@ def train(manager, max_episodes=500, resume=False):
     
     if resume and latest_actor.exists() and latest_critic.exists():
         logger.info(f"Resuming from {latest_actor}")
-        agent.actor.load_state_dict(torch.load(latest_actor))
-        agent.critic.load_state_dict(torch.load(latest_critic))
+        agent.actor.load_state_dict(torch.load(latest_actor, weights_only=True))
+        agent.critic.load_state_dict(torch.load(latest_critic, weights_only=True))
         
         # Load RNG state if exists
         rng_path = ckpt_dir / "rng_state.pt"
         if rng_path.exists():
-            rng_data = torch.load(rng_path)
+            rng_data = torch.load(rng_path, weights_only=False)
             torch.set_rng_state(rng_data['torch'])
             if torch.cuda.is_available():
                 torch.cuda.set_rng_state_all(rng_data['cuda'])

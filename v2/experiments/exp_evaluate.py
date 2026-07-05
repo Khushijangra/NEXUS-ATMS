@@ -34,7 +34,7 @@ def run_evaluate(exp_dir: Path, eval_episodes: int = 10):
     ckpts = list(ckpt_dir.glob("*.pth"))
     for ckpt_path in ckpts:
         print(f"\nEvaluating checkpoint: {ckpt_path.name}")
-        agent.actor.load_state_dict(torch.load(ckpt_path))
+        agent.actor.load_state_dict(torch.load(ckpt_path, weights_only=True))
         agent.actor.eval()
         
         for ep in range(1, eval_episodes + 1):

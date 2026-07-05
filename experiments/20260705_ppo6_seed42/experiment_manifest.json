@@ -10,5 +10,18 @@
     "Python_Version": "3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]",
     "Torch_Version": "2.6.0+cu124",
     "CUDA_Available": true,
-    "CUDA_Version": "12.4"
+    "CUDA_Version": "12.4",
+    "Total_Episodes": 6,
+    "Best_Avg_Reward": -800.4155516569896,
+    "Best_Queue": 75.78158569335938,
+    "Best_Delay": 2533.80419921875,
+    "Best_Carbon": 1759.6515662678605,
+    "Checkpoint_SHA256": {
+        "best_carbon_actor.pth": "a3c657f631cc30a7d0e670723f06de3a7611c63a3cf2954f85e7947656137881",
+        "best_delay_actor.pth": "93bcfa528ab775474d1586f3b5a08667cc568df59aae23513b54e09f2d07f331",
+        "best_queue_actor.pth": "fba624c0a069e720f4fdd36d5aa80a83723894aec46a66b7d9ec52b085fc9a06",
+        "best_reward_actor.pth": "078de004ec346c18992688aaa8f36dfe4f6d7569f1605348ecf26a4c7e247369",
+        "latest_actor.pth": "6bf7822ed06487a74886b11ef7680aac3474d6697d9e83134fc300504a39458b",
+        "latest_critic.pth": "0f7d842e18c815c226e2027e664d8db10dc8a1114c4922da4d1778e870e0ef83"
+    }
 }
