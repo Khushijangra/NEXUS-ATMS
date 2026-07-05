@@ -51,14 +51,18 @@ class ExperimentManager:
         seed = self.config.get('seed', 42)
         episodes = self.config.get('episodes', 500)
         
+        exp_name_search = f"{date_str}_{self.exp_base_name}"
+        seed_search = f"_seed{seed}"
+        
+        if self.resume:
+            existing = [d for d in self.exp_dir_base.iterdir() if d.is_dir() and exp_name_search in d.name and seed_search in d.name]
+            if not existing:
+                raise ValueError(f"No experiments found matching seed {seed} to resume!")
+            return sorted(existing, key=lambda x: x.name)[-1]
+            
         exp_name = f"{date_str}_{self.exp_base_name}{episodes}_seed{seed}"
         existing = [d for d in self.exp_dir_base.iterdir() if d.is_dir() and exp_name in d.name]
         
-        if self.resume:
-            if not existing:
-                raise ValueError(f"No experiments found matching {exp_name} to resume!")
-            return sorted(existing, key=lambda x: x.name)[-1]
-            
         suffix = f"_{len(existing)+1}" if existing else ""
         new_exp_dir = self.exp_dir_base / f"{exp_name}{suffix}"
         new_exp_dir.mkdir(parents=True, exist_ok=True)

@@ -44,9 +44,9 @@ def verify_pipeline():
         return
     print(f"[OK] Checkpoint saved successfully")
     
-    # Step 3: Resume works
+    # Step 3: Resume works (train up to 10 total)
     try:
-        run_cmd("python run.py --mode train --episodes 4 --seed 42 --resume")
+        run_cmd("python run.py --mode train --episodes 10 --seed 42 --resume")
         print("[OK] Resume training completed")
     except RuntimeError:
         return
